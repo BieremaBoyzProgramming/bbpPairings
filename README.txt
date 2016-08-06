@@ -173,21 +173,25 @@ Error codes
 When the program encounters an error, it usually prints a message describing the
 error to the standard error stream. (As an exception, an error while generating
 a checklist file may be written to the checklist file itself and not reported
-elsewhere). The program also returns error codes that a calling program can use
-to categorize the cause of the error. The following codes are used in the
-following situations:
+elsewhere.) If the program does not complete its main operation because of an
+error, the program also returns error codes that a calling program can use to
+categorize the cause of the error. The following codes are used in the following
+situations:
 0: The program completed successfully.
 1: The operation could not be completed because no valid pairing exists for the
-   current round of the tournament. (This error code is not used when checking a
-   tournament; instead, a message is included in the list of discrepancies.)
+   current round of the tournament. (This is not considered an error when
+   checking a tournament; instead, a message is included in the list of
+   discrepancies.)
 2: The program encountered an unexpected error.
 3: Some part of the request was invalid, for example, a wrongly formatted input
    file.
 4: The request may be valid, but the size of the data could not be handled by
    the program, either because it ran out of memory or due to size constraints
-   specified at compile time or imposed by the compiler.
+   specified at compile time or imposed by the compiler. (This error code is not
+   triggered during checklist generation.)
 5: There was an error while attempting to access a file; for example, the input
-   file might not exist or might not be readable.
+   file might not exist or might not be readable. (This error code is not
+   triggered for checklist files.)
 
 Time complexity
 ---------------
