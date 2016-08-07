@@ -72,11 +72,14 @@ round of the tournament (or more precisely, any round of the tournament in which
 no player has previously been assigned a color).
 
 If not specified, the initial piece color is assumed to be the color of the
-highest player in the first round, where by "first round" we again mean the
-first round where a color was assigned, and by "highest player" we mean the
-player with the smallest pairing ID out of the players who were assigned a color
-in the "first round." However, if the rank configuration option is applied,
-positional IDs are used instead of pairing IDs.
+highest player in the first round, where by "first round" we actually mean the
+first round where a color assignment is listed in the TRF(xb), and by "highest
+player" we mean the player with the smallest pairing ID out of the players
+participating in the pairing of the "first round." However, if the rank
+configuration option is applied, positional IDs are used instead of pairing IDs.
+If the color of the "highest player" in the "first round" is not listed, we use
+the color of the "second highest player" in the "first round," but reverse the
+color, and so on.
 
 Note that if pairing numbers are reordered after pairing the first round, the
 inferred initial color might not be correct, and the correct initial color
