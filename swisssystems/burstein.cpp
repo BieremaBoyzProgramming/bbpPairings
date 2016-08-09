@@ -432,23 +432,9 @@ namespace swisssystems
         const std::list<const tournament::Player *> &sortedPlayers,
         std::ostream &ostream,
         std::vector<MetricScores> &metricScores,
-        const std::vector<const tournament::Player *> *const vertexLabels =
-          nullptr,
         const tournament::Player *const bye = nullptr,
-        const std::vector<tournament::player_index> *const matching = nullptr)
+        const std::vector<const tournament::Player *> *const matching = nullptr)
       {
-        std::vector<const tournament::Player *>
-          matchingById(tournament.players.size());
-        tournament::player_index vertexIndex{ };
-        for (const tournament::Player *player : sortedPlayers)
-        {
-          if (matching && vertexLabels && player != bye)
-          {
-            matchingById[player->id] =
-              (*vertexLabels)[(*matching)[vertexIndex++]];
-          }
-        }
-
         swisssystems::printChecklist(
           ostream,
           std::deque<std::string>{
@@ -459,11 +445,12 @@ namespace swisssystems
             "Median tiebreak",
             "Cur"
           },
-          [&metricScores, &matchingById, bye, &tournament]
+          [&metricScores, &matching, bye, &tournament]
             (const tournament::Player &player)
           {
             const MetricScores &metricScore = metricScores[player.id];
-            const tournament::Player *opponent = matchingById[player.id];
+            const tournament::Player *opponent =
+              matching ? (*matching)[player.id] : nullptr;
             return std::deque<std::string>{
               utility::uintstringconversion
                 ::toString(metricScore.sonnebornBerger, 2),
@@ -738,7 +725,6 @@ namespace swisssystems
             sortedPlayers,
             *ostream,
             metricScores,
-            &vertexLabels,
             bye);
         }
         throw NoValidPairingException(
@@ -749,7 +735,8 @@ namespace swisssystems
       // Optimize the matching so that players at the top of their scoregroup
       // play those at the bottom.
 
-      std::vector<bool> matchedVertices(vertexLabels.size());
+      std::vector<const tournament::Player *>
+        matchingById(tournament.players.size());
       std::deque<tournament::player_index>::iterator scoreGroupIterator =
         scoreGroups.begin();
       tournament::player_index scoreGroupBegin = *scoreGroupIterator;
@@ -817,7 +804,7 @@ namespace swisssystems
           vertexIterator != fullScoreGroup.end();
           ++vertexIterator)
         {
-          if (!matchedVertices[*vertexIterator])
+          if (!matchingById[vertexLabels[*vertexIterator]->id])
           {
             matching_computer::edge_weight neighborPriority = 1;
             for (
@@ -826,7 +813,7 @@ namespace swisssystems
               neighborIterator != fullScoreGroup.end();
               ++neighborIterator)
             {
-              if (!matchedVertices[*neighborIterator])
+              if (!matchingById[vertexLabels[*neighborIterator]->id])
               {
                 matching_computer::edge_weight edgeWeight =
                   computeEdgeWeight(
@@ -854,8 +841,19 @@ namespace swisssystems
             else
             {
               // Finalize the match so the two players will not be reassigned.
-              matchedVertices[*vertexIterator] = true;
-              matchedVertices[match] = true;
+              matchingById[vertexLabels[*vertexIterator]->id] =
+                vertexLabels[match];
+              matchingById[vertexLabels[match]->id] =
+                vertexLabels[*vertexIterator];
+              result.emplace_back(
+                vertexLabels[*vertexIterator]->id,
+                vertexLabels[match]->id,
+                choosePlayerColor(
+                  *vertexLabels[*vertexIterator],
+                  *vertexLabels[match],
+                  tournament,
+                  metricScores));
+
               for (
                 tournament::player_index playerIndex{ };
                 playerIndex < vertexLabels.size();
@@ -883,10 +881,6 @@ namespace swisssystems
         scoreGroupBegin = *scoreGroupIterator;
       }
 
-      matchingComputer.computeMatching();
-      std::vector<matching_computer::vertex_index> matching =
-        matchingComputer.getMatching();
-
       if (ostream)
       {
         printChecklist(
@@ -894,26 +888,8 @@ namespace swisssystems
           sortedPlayers,
           *ostream,
           metricScores,
-          &vertexLabels,
           bye,
-          &matching);
-      }
-
-      // Generate the return list.
-      tournament::player_index vertexIndex{ };
-      for (const tournament::Player *const player : vertexLabels)
-      {
-        if (matching[vertexIndex] > vertexIndex)
-        {
-          const tournament::Player &opponent =
-            *vertexLabels[matching[vertexIndex]];
-
-          result.emplace_back(
-            player->id,
-            vertexLabels[matching[vertexIndex]]->id,
-            choosePlayerColor(*player, opponent, tournament, metricScores));
-        }
-        ++vertexIndex;
+          &matchingById);
       }
 
       sortResults(result, tournament);
