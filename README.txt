@@ -71,15 +71,15 @@ initial piece color must be specified when generating the pairings for the first
 round of the tournament (or more precisely, any round of the tournament in which
 no player has previously been assigned a color).
 
-If not specified, the initial piece color is assumed to be the color of the
-highest player in the first round, where by "first round" we actually mean the
-first round where a color assignment is listed in the TRF(xb), and by "highest
-player" we mean the player with the smallest pairing ID out of the players
-participating in the pairing of the "first round." However, if the rank
-configuration option is applied, positional IDs are used instead of pairing IDs.
-If the color of the "highest player" in the "first round" is not listed, we use
-the color of the "second highest player" in the "first round," but reverse the
-color, and so on.
+Let Round F refer to the first round where a color assignment is listed in the
+TRF(xb) for a certain tournament. If the initial piece color of the tournament
+is not specified, it is assumed to be the Round-F color of the highest player
+who participated in the pairing of Round F or an earlier round (where "highest
+player" is defined by pairing IDs or positional IDs, depending on whether the
+"rank" configuration option is used). If this highest player does not have a
+color listed for Round F, we use the Round-F color of the second highest player
+who participated in the pairing of Round F or earlier, but reverse the color,
+and so on.
 
 Note that if pairing numbers are reordered after pairing the first round, the
 inferred initial color might not be correct, and the correct initial color
