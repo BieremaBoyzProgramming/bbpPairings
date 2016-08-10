@@ -13,10 +13,9 @@ max_rounds = 0
 static = no
 optimize = yes
 
-DEPEND_FLAGS += -std=c++14 -I.
-COMPILER_FLAGS += -m$(bits) -Wpedantic -pedantic-errors -Wall -Wextra \
-	-Wuninitialized -Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual \
-	-Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
+COMPILER_FLAGS += -std=c++14 -I. -m$(bits) -MD -MP -Wpedantic -pedantic-errors \
+	-Wall -Wextra -Wuninitialized -Wstrict-overflow=4 -Wundef -Wshadow \
+	-Wcast-qual -Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
 	-Wno-unused-parameter -Wno-sign-compare -Wno-maybe-uninitialized -Wno-overflow
 
 VERSION_INFO="$(shell git describe --exact-match 2> /dev/null)"
@@ -55,8 +54,6 @@ ifneq ($(max_rounds),0)
 	COMPILER_FLAGS += -DMAX_ROUNDS=$(max_rounds)
 endif
 
-COMPILER_FLAGS += $(DEPEND_FLAGS)
-
 ifeq ($(COMP),)
 	COMP=gcc
 endif
@@ -87,11 +84,12 @@ endif
 LDFLAGS += $(CXXFLAGS)
 
 .PHONY: build clean
-build: bbpPairings.exe .depend
+build: bbpPairings.exe
 
 clean:
 	$(RM) bbpPairings.exe .dep.inc .depend
 	find . -name \*.o -type f -delete
+	find . -name \*.d -type f -delete
 
 default:
 	build
@@ -99,11 +97,8 @@ default:
 bbpPairings.exe: $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 
-.depend:
-	-@$(CXX) $(DEPEND_FLAGS) -MM $(OBJECTS:.o=.cpp) > $@
-
 # A bug in mingw-w64 causes compilation of tournament/generator.o with
 # optimization to fail.
 tournament/generator.o: CXXFLAGS := $(UNOPTIMIZED_FLAGS)
 
--include .depend
+-include $(OBJECTS:%.o=%.d)
