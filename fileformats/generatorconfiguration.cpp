@@ -48,142 +48,148 @@ namespace fileformats
       {
         std::string buffer;
         std::getline(inputStream, buffer);
-        if (buffer.length() && buffer[0] != '#' && buffer[0] != '\r')
+        std::istringstream innerStream(buffer);
+        while (innerStream.good())
         {
-          std::string propertyName;
-          std::istringstream stringStream(buffer);
-          std::getline(stringStream, propertyName, '=');
-          std::string propertyValue;
-          std::getline(stringStream, propertyValue, '\r');
-          if (stringStream)
+          std::string line;
+          std::getline(innerStream, line, '\r');
+          if (line.length() && line[0] != '#')
           {
-            try
+            std::istringstream stringStream(line);
+            std::string propertyName;
+            std::getline(stringStream, propertyName, '=');
+            std::string propertyValue;
+            std::getline(stringStream, propertyValue);
+            if (stringStream)
             {
-              if (propertyName == "PlayersNumber")
+              try
               {
-                configuration.playersNumber =
-                  utility::uintstringconversion
-                    ::parse<tournament::player_index>(propertyValue);
-              }
-              else if (propertyName == "RoundsNumber")
-              {
-                configuration.roundsNumber =
-                  utility::uintstringconversion
-                    ::parse<tournament::round_index>(propertyValue);
-                configuration.tournament.expectedRounds =
-                  configuration.roundsNumber;
-              }
-              else if (propertyName == "DrawPercentage")
-              {
-                configuration.drawPercentage =
-                  utility::uintstringconversion::parse<
-                    decltype(configuration.drawPercentage)
-                  >(propertyValue);
-                if (configuration.drawPercentage > 100)
+                if (propertyName == "PlayersNumber")
                 {
-                  throw std::invalid_argument("");
+                  configuration.playersNumber =
+                    utility::uintstringconversion
+                      ::parse<tournament::player_index>(propertyValue);
                 }
-              }
-              else if (propertyName == "ForfeitRate")
-              {
-                configuration.forfeitRate = std::stof(propertyValue);
-                if (configuration.forfeitRate < 1)
+                else if (propertyName == "RoundsNumber")
                 {
-                  throw std::invalid_argument("");
+                  configuration.roundsNumber =
+                    utility::uintstringconversion
+                      ::parse<tournament::round_index>(propertyValue);
+                  configuration.tournament.expectedRounds =
+                    configuration.roundsNumber;
                 }
-              }
-              else if (propertyName == "RetiredRate")
-              {
-                configuration.retiredRate = std::stof(propertyValue);
-                if (configuration.retiredRate < 2)
+                else if (propertyName == "DrawPercentage")
                 {
-                  throw std::invalid_argument("");
+                  configuration.drawPercentage =
+                    utility::uintstringconversion::parse<
+                      decltype(configuration.drawPercentage)
+                    >(propertyValue);
+                  if (configuration.drawPercentage > 100)
+                  {
+                    throw std::invalid_argument("");
+                  }
                 }
-              }
-              else if (
-                propertyName == "HalfPointByeRate"
-                  || propertyName == "HalfPointByteRate")
-              {
-                configuration.halfPointByeRate = std::stof(propertyValue);
-                if (configuration.halfPointByeRate < 1)
+                else if (propertyName == "ForfeitRate")
                 {
-                  throw std::invalid_argument("");
+                  configuration.forfeitRate = std::stof(propertyValue);
+                  if (configuration.forfeitRate < 1)
+                  {
+                    throw std::invalid_argument("");
+                  }
                 }
-              }
-              else if (propertyName == "HighestRating")
-              {
-                configuration.highestRating =
-                  utility::uintstringconversion
-                    ::parse<tournament::rating>(propertyValue);
-              }
-              else if (propertyName == "LowestRating")
-              {
-                configuration.lowestRating =
-                  utility::uintstringconversion
-                    ::parse<tournament::rating>(propertyValue);
-              }
-              else if (propertyName == "PointsForWin")
-              {
-                configuration.tournament.pointsForWin =
-                  utility::uintstringconversion
-                    ::parse<tournament::points>(propertyValue, 1);
-              }
-              else if (propertyName == "PointsForDraw")
-              {
-                configuration.tournament.pointsForDraw =
-                  utility::uintstringconversion
-                    ::parse<tournament::points>(propertyValue, 1);
-              }
-              else if (propertyName == "Accelerated")
-              {
-                if (propertyValue == "1")
+                else if (propertyName == "RetiredRate")
                 {
-                  configuration.automaticAcceleration = true;
+                  configuration.retiredRate = std::stof(propertyValue);
+                  if (configuration.retiredRate < 2)
+                  {
+                    throw std::invalid_argument("");
+                  }
                 }
-                else if (propertyValue == "0")
+                else if (
+                  propertyName == "HalfPointByeRate"
+                    || propertyName == "HalfPointByteRate")
                 {
-                  configuration.automaticAcceleration = false;
+                  configuration.halfPointByeRate = std::stof(propertyValue);
+                  if (configuration.halfPointByeRate < 1)
+                  {
+                    throw std::invalid_argument("");
+                  }
+                }
+                else if (propertyName == "HighestRating")
+                {
+                  configuration.highestRating =
+                    utility::uintstringconversion
+                      ::parse<tournament::rating>(propertyValue);
+                }
+                else if (propertyName == "LowestRating")
+                {
+                  configuration.lowestRating =
+                    utility::uintstringconversion
+                      ::parse<tournament::rating>(propertyValue);
+                }
+                else if (propertyName == "PointsForWin")
+                {
+                  configuration.tournament.pointsForWin =
+                    utility::uintstringconversion
+                      ::parse<tournament::points>(propertyValue, 1);
+                }
+                else if (propertyName == "PointsForDraw")
+                {
+                  configuration.tournament.pointsForDraw =
+                    utility::uintstringconversion
+                      ::parse<tournament::points>(propertyValue, 1);
+                }
+                else if (propertyName == "Accelerated")
+                {
+                  if (propertyValue == "1")
+                  {
+                    configuration.automaticAcceleration = true;
+                  }
+                  else if (propertyValue == "0")
+                  {
+                    configuration.automaticAcceleration = false;
+                  }
+                  else
+                  {
+                    throw std::invalid_argument("");
+                  }
                 }
                 else
                 {
+                  throw FileFormatException(
+                    "Unexpected parameter \""
+                      + propertyName
+                      + "\" in configuration file.");
+                }
+
+                if (!stringStream)
+                {
                   throw std::invalid_argument("");
                 }
               }
-              else
+              catch (std::invalid_argument &)
               {
                 throw FileFormatException(
-                  "Unexpected parameter \""
+                  "The value for parameter \""
                     + propertyName
-                    + "\" in configuration file.");
+                    + "\" in the configuration file is invalid.");
               }
-
-              if (!stringStream)
+              catch (std::out_of_range &)
               {
-                throw std::invalid_argument("");
+                throw tournament::BuildLimitExceededException(
+                  "The value for parameter \""
+                    + propertyName
+                    + "\" in the configuration file is not supported by this "
+                      "build.");
               }
             }
-            catch (std::invalid_argument &)
+            else
             {
               throw FileFormatException(
-                "The value for parameter \""
-                  + propertyName
-                  + "\" in the configuration file is invalid.");
-            }
-            catch (std::out_of_range &)
-            {
-              throw tournament::BuildLimitExceededException(
-                "The value for parameter \""
-                  + propertyName
-                  + "\" in the configuration file is not supported by this "
-                    "build.");
+                "Error parsing configuration file line: " + buffer);
             }
           }
-          else
-          {
-            throw FileFormatException(
-              "Error parsing configuration file line: " + buffer);
-          }
-        }
+        } while (innerStream.good());
       }
       if (!inputStream.eof())
       {
