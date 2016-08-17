@@ -113,7 +113,9 @@ namespace tournament
                 .matches
                 [tournament.playedRounds];
 
-            if (whiteMatch.opponent == iterator->black)
+            if (
+              whiteMatch.opponent == iterator->black
+                && whiteMatch.color != tournament::COLOR_BLACK)
             {
               correctMatching.erase(iterator);
             }
