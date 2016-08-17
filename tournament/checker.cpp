@@ -134,7 +134,9 @@ namespace tournament
                   whiteMatch.opponent,
                   whiteMatch.color);
               }
-              if (iterator->black < blackMatch.opponent)
+              if (
+                iterator->black != iterator->white
+                  && iterator->black <= blackMatch.opponent)
               {
                 providedMatching.emplace_back(
                   iterator->black,
@@ -157,37 +159,46 @@ namespace tournament
               << std::endl;
 
             std::list<swisssystems::Pairing>::const_iterator
-                providedPairingsIterator =
-              providedMatching.begin();
-            for (const swisssystems::Pairing &correctPairing : correctMatching)
+                correctPairingsIterator =
+              correctMatching.begin();
+            for (
+              const swisssystems::Pairing &providedPairing : providedMatching)
             {
-              std::cout
-                << "    "
-                << std::right
-                << std::setw(3)
-                << utility::uintstringconversion
-                    ::toString(correctPairing.white + 1u)
-                << " - "
-                << std::setw(3)
-                << (correctPairing.black == correctPairing.white
-                      ? "0"
-                      : utility::uintstringconversion
-                          ::toString(correctPairing.black + 1u))
-                << std::setw(16)
+              std::cout << "    " << std::right << std::setw(3);
+              if (correctPairingsIterator == correctMatching.end())
+              {
+                std::cout << "" << "   " << std::setw(3) << "";
+              }
+              else
+              {
+                std::cout
+                  << utility::uintstringconversion
+                      ::toString(correctPairingsIterator->white + 1u)
+                  << " - "
+                  << std::setw(3)
+                  << (correctPairingsIterator->black
+                          == correctPairingsIterator->white
+                        ? "0"
+                        : utility::uintstringconversion
+                            ::toString(correctPairingsIterator->black + 1u));
+              }
+              std::cout << std::setw(16)
                 << ""
                 << std::setw(3)
                 << utility::uintstringconversion::toString(
-                    providedPairingsIterator->white + 1u)
+                    providedPairing.white + 1u)
                 << " - "
                 << std::setw(3)
-                << (providedPairingsIterator->black
-                        == providedPairingsIterator->white
+                << (providedPairing.black == providedPairing.white
                       ? "0"
                       : utility::uintstringconversion
-                          ::toString(providedPairingsIterator->black + 1u))
+                          ::toString(providedPairing.black + 1u))
                 << std::endl;
 
-              ++providedPairingsIterator;
+              if (correctPairingsIterator != correctMatching.end())
+              {
+                ++correctPairingsIterator;
+              }
             }
             std::cout << std::endl;
           }
