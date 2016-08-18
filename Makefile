@@ -7,6 +7,8 @@ OBJECTS = main.o fileformats/generatorconfiguration.o fileformats/trf.o \
 bits = 64
 debug = no
 max_players = 0
+# Points are specified in tenths. So a value of 999 means that the max total
+# score of a player (with acceleration) is 99.9.
 max_points = 0
 max_rating = 0
 max_rounds = 0
