@@ -612,7 +612,7 @@ namespace fileformats
               ++matchIndex;
             }
 
-            if (player.scoreWithAcceleration() != points)
+            if (player.scoreWithoutAcceleration != points)
             {
               throw FileFormatException(
                 "The score for player "
@@ -640,7 +640,7 @@ namespace fileformats
         outputStream << std::setfill(' ')
           << std::setw(4)
           << utility::uintstringconversion
-              ::toString(player.scoreWithAcceleration(), 1)
+              ::toString(player.scoreWithoutAcceleration, 1)
           << std::setw(5)
           << utility::uintstringconversion::toString(rank + 1u);
 
