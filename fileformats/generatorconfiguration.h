@@ -23,6 +23,7 @@
 
 #include <tournament/generator.h>
 
+#ifndef OMIT_GENERATOR
 namespace fileformats
 {
   namespace generatorconfiguration
@@ -32,5 +33,6 @@ namespace fileformats
       std::istream &);
   }
 }
+#endif
 
 #endif

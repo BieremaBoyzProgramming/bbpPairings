@@ -30,6 +30,7 @@
 
 #include "tournament.h"
 
+#ifndef OMIT_GENERATOR
 namespace tournament
 {
   namespace generator
@@ -90,7 +91,7 @@ namespace tournament
     };
 
     /**
-     * A class represent options to generate a random tournament, including
+     * A class representing options to generate a random tournament, including
      * random players.
      */
     struct Configuration : public MatchesConfiguration
@@ -124,5 +125,6 @@ namespace tournament
       std::ostream *);
   }
 }
+#endif
 
 #endif

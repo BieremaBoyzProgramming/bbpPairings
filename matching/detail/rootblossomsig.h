@@ -19,8 +19,6 @@
 #ifndef ROOTBLOSSOMSIG_H
 #define ROOTBLOSSOMSIG_H
 
-#include <deque>
-#include <memory>
 #include <vector>
 
 #include "types.h"
@@ -31,12 +29,6 @@ namespace matching
   {
     template <typename>
     struct Blossom;
-    template <typename>
-    class BlossomIterator;
-    template <typename>
-    class BlossomMatchingIterator;
-    template <typename>
-    class BlossomVertexIterator;
     template <typename>
     class Graph;
     template <typename>
@@ -68,7 +60,8 @@ namespace matching
        *
        * Only valid during the augmentation step.
        */
-      edge_weight minOuterEdgeResistance;
+      typename edge_weight_traits<edge_weight>::vector::reference
+        minOuterEdgeResistance;
       Blossom<edge_weight> &rootChild;
       Vertex<edge_weight> *baseVertex;
       /**
@@ -96,33 +89,27 @@ namespace matching
 
       RootBlossom(RootBlossom<edge_weight> &) = delete;
       RootBlossom(RootBlossom<edge_weight> &&) = delete;
-      RootBlossom(Vertex<edge_weight> &, vertex_index);
+      RootBlossom(Vertex<edge_weight> &, vertex_index, Graph<edge_weight> &);
       template <class PathIterator>
-      RootBlossom(PathIterator, PathIterator, const Graph<edge_weight> &);
+      RootBlossom(PathIterator, PathIterator, Graph<edge_weight> &);
       RootBlossom(
         Blossom<edge_weight> &,
         Vertex<edge_weight> &,
-        Vertex<edge_weight> *);
+        Vertex<edge_weight> *,
+        Graph<edge_weight> &);
       RootBlossom(
-          Blossom<edge_weight> &,
-          Vertex<edge_weight> &,
-          Vertex<edge_weight> *,
-          Label,
-          Vertex<edge_weight> *,
-          Vertex<edge_weight> *);
+        Blossom<edge_weight> &,
+        Vertex<edge_weight> &,
+        Vertex<edge_weight> *,
+        Label,
+        Vertex<edge_weight> *,
+        Vertex<edge_weight> *,
+        Graph<edge_weight> &);
 
-      void useMatchingIterators() const &;
+      void putVerticesInMatchingOrder() const &;
 
-      BlossomIterator<edge_weight> blossomBegin() const &;
-      BlossomIterator<edge_weight> blossomEnd() const &;
-
-      BlossomVertexIterator<edge_weight> blossomVertexBegin() const &;
-      BlossomVertexIterator<edge_weight> blossomVertexEnd() const &;
-
-      BlossomMatchingIterator<edge_weight> blossomMatchingBegin() const &;
-      BlossomMatchingIterator<edge_weight> blossomMatchingEnd() const &;
-
-      void freeAncestorOfBase(Blossom<edge_weight> &) const &;
+      void freeAncestorOfBase(Blossom<edge_weight> &, Graph<edge_weight> &)
+        &;
       void prepareVertexForWeightAdjustments(
         Vertex<edge_weight> &,
         Graph<edge_weight> &
@@ -131,13 +118,15 @@ namespace matching
     private:
       RootBlossom(
         ParentBlossom<edge_weight> &,
-        const std::deque<std::shared_ptr<const RootBlossom<edge_weight>>> &,
-        const Graph<edge_weight> &,
+        const std::vector<RootBlossom<edge_weight> *> &,
+        Graph<edge_weight> &,
         const RootBlossom<edge_weight> &);
 
+      void updateRootBlossomInDescendants(RootBlossom<edge_weight> &) &;
+
       void initializeFromChildren(
-        const std::deque<std::shared_ptr<const RootBlossom<edge_weight>>> &,
-        const Graph<edge_weight> &) &;
+        const std::vector<RootBlossom<edge_weight> *> &,
+        Graph<edge_weight> &) &;
     };
 
     template <typename edge_weight>

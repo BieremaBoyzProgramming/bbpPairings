@@ -28,6 +28,7 @@
 #include "generatorconfiguration.h"
 #include "types.h"
 
+#ifndef OMIT_GENERATOR
 namespace fileformats
 {
   namespace generatorconfiguration
@@ -198,3 +199,4 @@ namespace fileformats
     }
   }
 }
+#endif

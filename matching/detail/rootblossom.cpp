@@ -17,14 +17,12 @@
 
 
 #include <cassert>
-#include <memory>
+#include <vector>
 
 #include "../templateinstantiation.h"
 
-#include "blossomsig.h"
-#include "blossomiteratorimpl.h"
-#include "blossomvertexiteratorimpl.h"
-#include "graphimpl.h"
+#include "blossomimpl.h"
+#include "graphsig.h"
 #include "parentblossomimpl.h"
 #include "rootblossomimpl.h"
 #include "types.h"
@@ -35,19 +33,17 @@ namespace matching
   namespace detail
   {
     /**
-     * Initialize the subblossom and iteratorStartsWithSubblossom fields of the
-     * ParentBlossoms so that BlossomVertexIterator returns vertices in an order
-     * in which matched vertices are consecutive.
-     *
-     * This invalidates all extant iterators over the RootBlossom.
+     * Reorder the RootBlossom's linked list of vertices so that they are
+     * returned in an order in which matched vertices are consecutive.
      */
     template <typename edge_weight>
-    void RootBlossom<edge_weight>::useMatchingIterators() const &
+    void RootBlossom<edge_weight>::putVerticesInMatchingOrder() const &
     {
       const Blossom<edge_weight> *currentBlossom = &rootChild;
       Vertex<edge_weight> *currentVertex = baseVertex;
       bool startsWithBase = true;
 
+      // Each iteration of this loop begins with a new currentVertex.
       do
       {
         setPointersFromAncestor<edge_weight>(
@@ -55,6 +51,9 @@ namespace matching
           *currentBlossom,
           startsWithBase);
         currentBlossom = currentVertex;
+
+        // This loop follows the path up from a Vertex to the last ParentBlossom
+        // we have finished.
         while (currentBlossom != &rootChild)
         {
           assert(
@@ -63,14 +62,26 @@ namespace matching
           startsWithBase =
             !startsWithBase
               && currentBlossom->parentBlossom->subblossom != currentBlossom;
+          currentBlossom->previousBlossom->vertexListTail->nextVertex =
+            currentBlossom->vertexListHead;
           currentBlossom = currentBlossom->nextBlossom;
           if (currentBlossom == currentBlossom->parentBlossom->subblossom)
           {
             ParentBlossom<edge_weight> &parentBlossom =
               *currentBlossom->parentBlossom;
-            currentBlossom = &parentBlossom;
             startsWithBase = parentBlossom.iterationStartsWithSubblossom;
-            continue;
+            currentBlossom->previousBlossom->vertexListTail->nextVertex =
+              currentBlossom->vertexListHead;
+            parentBlossom.vertexListHead =
+              (startsWithBase ? currentBlossom : currentBlossom->nextBlossom)
+                ->vertexListHead;
+            parentBlossom.vertexListTail =
+              (startsWithBase
+                ? currentBlossom->previousBlossom
+                : currentBlossom
+              )->vertexListTail;
+            currentBlossom = &parentBlossom;
+            // Repeat the inner loop, iterating up to the parent blossom.
           }
           else
           {
@@ -79,48 +90,53 @@ namespace matching
                 ? currentBlossom->vertexToPreviousSiblingBlossom
                 : currentBlossom->vertexToNextSiblingBlossom;
             break;
+            // Repeat the outer loop with a new Vertex.
           }
         }
       } while (currentBlossom != &rootChild);
+      rootChild.vertexListTail->nextVertex = nullptr;
     }
 
     /**
      * Initialize rootBlossom pointers and minimum resistance values for a newly
-     * formed OUTER ParentBlossom.
+     * formed OUTER ParentBlossom. Destory the old RootBlossoms.
      */
     template <typename edge_weight>
     void RootBlossom<edge_weight>::initializeFromChildren(
-      const std::deque<std::shared_ptr<const RootBlossom<edge_weight>>>
-        &originalBlossoms,
-      const Graph<edge_weight> &graph
+      const std::vector<RootBlossom<edge_weight> *> &originalBlossoms,
+      Graph<edge_weight> &graph
     ) &
     {
-      minOuterEdgeResistance = graph.maxEdgeWeight * 2u + 1u;
-      for (
-        BlossomIterator<edge_weight> blossomIterator = blossomBegin();
-        blossomIterator != blossomEnd();
-        ++blossomIterator)
+      minOuterEdgeResistance = graph.aboveMaxEdgeWeight;
+      for (RootBlossom<edge_weight> *const rootBlossom : originalBlossoms)
       {
-        blossomIterator->rootBlossom = rootChild.rootBlossom;
+        graph.rootBlossomPool.hide(*rootBlossom);
+        rootBlossom->updateRootBlossomInDescendants(*this);
       }
 
+      edge_weight resistanceStorage = graph.aboveMaxEdgeWeight;
+      edge_weight minResistance = graph.aboveMaxEdgeWeight;
+
       for (
-        RootBlossomIterator<edge_weight> iterator = graph.rootBlossomBegin();
-        iterator != graph.rootBlossomEnd();
+        auto iterator = graph.rootBlossomPool.begin();
+        iterator != graph.rootBlossomPool.end();
         ++iterator)
       {
-        if (iterator->label == LABEL_OUTER && &*iterator != this)
+        assert(&*iterator != this);
+        assert(iterator->rootChild.rootBlossom != this);
+        if (iterator->label == LABEL_OUTER)
         {
-          edge_weight minResistance = graph.maxEdgeWeight * 2u + 1u;
+          minResistance = graph.aboveMaxEdgeWeight;
 
-          for (
-            const std::shared_ptr<const RootBlossom<edge_weight>> &blossom
-              : originalBlossoms)
+          for (RootBlossom<edge_weight> *const blossom : originalBlossoms)
           {
             if (blossom->label == LABEL_INNER)
             {
-              minResistance =
-                updateOuterOuterEdges(*blossom, *iterator, minResistance);
+              updateOuterOuterEdges(
+                *blossom,
+                *iterator,
+                minResistance,
+                resistanceStorage);
             }
             else
             {
@@ -150,10 +166,14 @@ namespace matching
                   iterator->minOuterEdges[baseVertex->vertexIndex] =
                     iterator->minOuterEdges[blossom->baseVertex->vertexIndex];
 
-                  minOuterEdgeResistance =
-                    std::min(minOuterEdgeResistance, minResistance);
-                  iterator->minOuterEdgeResistance =
-                    std::min(iterator->minOuterEdgeResistance, minResistance);
+                  if (minResistance < minOuterEdgeResistance)
+                  {
+                    minOuterEdgeResistance = minResistance;
+                  }
+                  if (minResistance < iterator->minOuterEdgeResistance)
+                  {
+                    iterator->minOuterEdgeResistance = minResistance;
+                  }
                 }
               }
             }
@@ -161,15 +181,16 @@ namespace matching
         }
       }
 
-      for (
-        const std::shared_ptr<const RootBlossom<edge_weight>> &rootBlossom
-          : originalBlossoms
-      )
+      Vertex<edge_weight> *previousHead{ };
+      for (RootBlossom<edge_weight> *const rootBlossom : originalBlossoms)
       {
         if (rootBlossom->label != LABEL_OUTER)
         {
           graph.updateInnerOuterEdges(*rootBlossom);
         }
+        rootBlossom->rootChild.vertexListTail->nextVertex = previousHead;
+        previousHead = rootBlossom->rootChild.vertexListHead;
+        graph.rootBlossomPool.destroy(*rootBlossom);
       }
     }
 
@@ -180,17 +201,18 @@ namespace matching
      */
     template <typename edge_weight>
     void RootBlossom<edge_weight>::freeAncestorOfBase(
-      Blossom<edge_weight> &ancestor
-    ) const &
+      Blossom<edge_weight> &ancestor,
+      Graph<edge_weight> &graph
+    ) &
     {
       if (&ancestor == &rootChild)
       {
         return;
       }
 
-      edge_weight dualVariableAdjustment{ };
-      std::shared_ptr<ParentBlossom<edge_weight>> blossom =
-        ancestor.parentBlossom;
+      // Calculate the total dualVariable adjustment.
+      edge_weight dualVariableAdjustment = graph.aboveMaxEdgeWeight & 0u;
+      ParentBlossom<edge_weight> *blossom = ancestor.parentBlossom;
       while (blossom)
       {
         assert(!(blossom->dualVariable & 1u));
@@ -202,15 +224,15 @@ namespace matching
       Blossom<edge_weight> *nextBlossom = ancestor.nextBlossom;
 
       // Create a RootBlossom for ancestor.
-      new RootBlossom<edge_weight>(
+      graph.rootBlossomPool.construct(
         ancestor,
         *ancestor.rootBlossom->baseVertex,
-        ancestor.rootBlossom->baseVertexMatch);
+        ancestor.rootBlossom->baseVertexMatch,
+        graph);
       for (
-        BlossomVertexIterator<edge_weight> iterator =
-          ancestor.rootBlossom->blossomVertexBegin();
-        iterator != ancestor.rootBlossom->blossomVertexEnd();
-        ++iterator)
+        auto iterator = ancestor.vertexListHead;
+        iterator;
+        iterator = iterator->nextVertex)
       {
         iterator->dualVariable += dualVariableAdjustment;
       }
@@ -227,20 +249,20 @@ namespace matching
           currentBlossom = nextBlossom)
         {
           nextBlossom = currentBlossom->nextBlossom;
-          new RootBlossom<edge_weight>(
+          graph.rootBlossomPool.construct(
             *currentBlossom,
             linksForward
               ? *currentBlossom->vertexToNextSiblingBlossom
               : *currentBlossom->vertexToPreviousSiblingBlossom,
             linksForward
               ? nextBlossom->vertexToPreviousSiblingBlossom
-              : previousBlossom->vertexToNextSiblingBlossom);
+              : previousBlossom->vertexToNextSiblingBlossom,
+            graph);
 
           for (
-            BlossomVertexIterator<edge_weight> iterator =
-              currentBlossom->rootBlossom->blossomVertexBegin();
-            iterator != currentBlossom->rootBlossom->blossomVertexEnd();
-            ++iterator)
+            auto iterator = currentBlossom->vertexListHead;
+            iterator;
+            iterator = iterator->nextVertex)
           {
             iterator->dualVariable += dualVariableAdjustment;
           }
@@ -252,13 +274,25 @@ namespace matching
         dualVariableAdjustment -= blossom->dualVariable >> 1;
         assert(!(blossom->dualVariable & 1u));
 
-        childToFree = blossom.get();
+        if (childToFree != &ancestor)
+        {
+          // Destroy unused ParentBlossoms.
+          graph.parentBlossomPool.destroy(
+            *static_cast<ParentBlossom<edge_weight> *>(childToFree));
+        }
+        childToFree = blossom;
         nextBlossom = blossom->nextBlossom;
         blossom = blossom->parentBlossom;
       }
+
+      // Destroy the old RootBlossom and its rootChild.
+      graph.parentBlossomPool.destroy(
+        static_cast<ParentBlossom<edge_weight> &>(rootChild));
+      graph.rootBlossomPool.destroy(*this);
     }
 
-    MATCHINGEDGEWEIGHTPARAMETERS1(template class RootBlossom<, >;)
+#define ROOT_BLOSSOM_INSTANTIATION(a) template class RootBlossom<a>;
+    INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(ROOT_BLOSSOM_INSTANTIATION)
 
     /**
      * Perform one direction of the augmentation, augmenting between vertex and
@@ -286,14 +320,8 @@ namespace matching
       vertex->rootBlossom->baseVertexMatch = newMatch;
     }
 
-#define COMMA ,
-#define LPAREN (
-#define RPAREN )
-
-    MATCHINGEDGEWEIGHTPARAMETERS2(
-      template void augmentToSource LPAREN Vertex<,
-      > * COMMA Vertex<,
-      > * RPAREN
-    );
+#define AUGMENT_TO_SOURCE_INSTANTIATION(a) \
+template void augmentToSource(Vertex<a> *, Vertex<a> *);
+    INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(AUGMENT_TO_SOURCE_INSTANTIATION)
   }
 }

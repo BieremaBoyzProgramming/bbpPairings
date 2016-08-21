@@ -13,7 +13,10 @@ Pairings and Program Commission. To be clear, the program is not endorsed by
 FIDE or the SPP. It is not a full tournament manager, just an engine for
 computing the pairings.
 
-The program currently implements only the Burstein system.
+The program currently implements the Burstein system and the current (as of mid-
+2016) draft of the 2017 Dutch rules. Since the new Dutch rules are still being
+finalized, support for Dutch pairings should be considered experimental, and
+it may be updated or dropped between releases without warning.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
@@ -23,9 +26,9 @@ documentation assumes full understanding of the JaVaFo AUM.
 
 Hereafter, we will use the name "JaVaFo" to refer to JaVaFo 1.4.
 
-TRF(xb)
+TRF(bx)
 -------
-BBP Pairings supports only one file format, TRF(xb), an extension of the TRF(x)
+BBP Pairings supports only one file format, TRF(bx), an extension of the TRF(x)
 format defined for JaVaFo.
 
 JaVaFo attempts to infer the point system used for the tournament (the number of
@@ -42,12 +45,12 @@ scores are adjusted by counting unplayed games as draws when calculating their
 opponents' tiebreak scores, the program needs to know the number of points given
 for draws and cannot infer it.
 
-For this reason, we must introduce an extension to the TRF(xb) format. The
+For this reason, we must introduce an extension to the TRF(bx) format. The
 extension uses codes BBW and BBD for specifying the number of points awarded for
 a win and a draw, respectively. The format is
 BBW pp.p
 BBD pp.p
-Thus, for a tournament with 3 points for wins and 1 point for draws, the TRF(xb)
+Thus, for a tournament with 3 points for wins and 1 point for draws, the TRF(bx)
 should contain the lines
 BBW  3.0
 BBD  1.0
@@ -91,8 +94,8 @@ TRF, but it can also read files produced using the codes specified in the JaVaFo
 AUM.
 
 
-Generator
----------
+Random Tournament Generator
+---------------------------
 BBP Pairings introduces a new option for generating tournaments paired using the
 Burstein system. Since the Burstein system has a specific acceleration system
 included in its rules, the "Accelerated" option instructs the generator to apply
@@ -126,6 +129,11 @@ games. The "Buchholz score" is the product of the player's total score and her
 in different scoregroups (again, assuming their SB scores are the same). The
 "Median tiebreak" and "Median score" are defined analogously.
 
+For the Dutch system, the column C2 indicates whether a given player is eligible
+for the pairing-allocated bye (Y if yes, N if no). The C12 and C14 columns
+indicate the floating direction of the player on the previous and
+next-to-previous rounds, respectively (U for upfloat, D for downfloat).
+
 BBP Pairing has the additional option to generate checklist files while
 generating or checking tournaments, not just when pairing individual rounds. In
 this case, the tables for all of the rounds are put into the same file, with
@@ -136,9 +144,8 @@ Command line arguments
 BBP Pairings always performs pairings using a weighted matching algorithm, so it
 does not use the -w and -q options of JaVaFo.
 
-Since BBP Pairings has been designed with the intention of supporting more than
-one Swiss system in the future, an argument specifying which Swiss system to use
-for pairing is required.
+Since BBP Pairings supports more than one Swiss system, an argument specifying
+which Swiss system to use for pairing is required.
 
 For the most part, BBP Pairings was written to be compatible with compilers
 supporting the 2014 C++ standard (C++14). However, C++14 has no portable way to
@@ -156,9 +163,9 @@ version information displayed when using the -r flag.
 
 The acceptable syntax forms for running BBP Pairings are:
 bbpPairings.exe [-r]
-bbpPairings.exe [-r] --burstein input-file -c [-l check-list-file]
-bbpPairings.exe [-r] --burstein input-file -p [output-file] [-l check-list-file]
-bbpPairings.exe [-r] --burstein (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l check-list-file]
+bbpPairings.exe [-r] (--burstein | --dutch) input-file -c [-l check-list-file]
+bbpPairings.exe [-r] (--burstein | --dutch) input-file -p [output-file] [-l check-list-file]
+bbpPairings.exe [-r] (--burstein | --dutch) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l check-list-file]
 
 On a build of BBP Pairings that supports file path manipulation capabilities,
 the check-list-file argument is optional, with the same default as JaVaFo. If no
@@ -198,7 +205,22 @@ situations:
 
 Time complexity
 ---------------
-Let n denote the largest player ID in a given tournament. Assuming the number of
-rounds in the tournament is O(n), this program is believed to achieve a
-theoretic runtime that is O(n^3) for pairing a single round using the Burstein
-system.
+Let n denote the largest player ID in a given tournament and r the number of
+rounds already played. For simplicity, assume r is O(n).
+
+This program is believed to achieve a theoretic runtime that is O(n^3) for
+pairing a single round using the Burstein system.
+
+For the Dutch system, pairing a round is believed to take time
+O(n^3 * s * (d + s) * log n), where s is the number of occupied score groups
+in the current round and d is the number of distinct score differences between
+two players in the round. Note that if the point system (the number of points
+for wins and for draws) is treated as constant and there is no acceleration,
+then d and s are both O(r), since the point values are rational numbers, and in
+that case, the runtime is O(n^3 * r^2 * log n). If we also assume that r is
+O(log n), then the runtime is O(n^3 * (log n)^3).
+
+The core of the pairing engine is an application of the simpler of the two
+weighted matching algorithms exposited in "An O(EV log V) Algorithm for Finding
+a Maximal Weighted Matching in General Graphs," by Zvi Galil, Silvio Micali, and
+Harold Gabow, 1986.

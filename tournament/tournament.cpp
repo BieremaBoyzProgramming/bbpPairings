@@ -51,14 +51,6 @@ namespace tournament
         player.rankIndex = effectivePairingNumber++;
       }
     }
-
-    if (effectivePairingNumber > maxPlayers)
-    {
-      throw BuildLimitExceededException(
-        "This build supports at most "
-          + utility::uintstringconversion::toString(maxPlayers)
-          + " players.");
-    }
   }
 
   /**
@@ -71,33 +63,16 @@ namespace tournament
     {
       if (player.isValid)
       {
-        // Update acceleration.
-        player.acceleration =
-          player.accelerations.size() > playedRounds
-            ? player.accelerations[playedRounds]
-            : 0u;
-
-        if (
-          player.scoreWithAcceleration() < player.scoreWithoutAcceleration
-            || player.scoreWithAcceleration() > maxPoints)
-        {
-          throw BuildLimitExceededException(
-            "This build does not support scores above "
-              + utility::uintstringconversion::toString(maxPoints, 1)
-              + '.');
-        }
-
         // Update color preferences.
-        tournament::round_index gamesAsWhite{ };
-        tournament::round_index gamesAsBlack{ };
+        round_index gamesAsWhite{ };
+        round_index gamesAsBlack{ };
         player_index consecutiveCount{ };
-        Color consecutiveColor;
         for (const Match &match : player.matches)
         {
           if (match.gameWasPlayed)
           {
             ++(match.color == COLOR_WHITE ? gamesAsWhite : gamesAsBlack);
-            if (!consecutiveCount || match.color != consecutiveColor)
+            if (!consecutiveCount || match.color != player.repeatedColor)
             {
               consecutiveCount = 1;
             }
@@ -105,35 +80,30 @@ namespace tournament
             {
               ++consecutiveCount;
             }
-            consecutiveColor = match.color;
+            player.repeatedColor = match.color;
           }
         }
         const Color lowerColor =
           gamesAsWhite > gamesAsBlack
             ? tournament::COLOR_BLACK
             : tournament::COLOR_WHITE;
-        const tournament::round_index imbalance =
+        player.colorImbalance =
           lowerColor == COLOR_BLACK
             ? gamesAsWhite - gamesAsBlack
             : gamesAsBlack - gamesAsWhite;
         player.colorPreference =
-          imbalance > 1 ? lowerColor
-            : consecutiveCount > 1 ? invert(consecutiveColor)
-            : imbalance > 0 ? lowerColor
-            : consecutiveCount ? invert(consecutiveColor)
+          player.colorImbalance > 1 ? lowerColor
+            : consecutiveCount > 1 ? invert(player.repeatedColor)
+            : player.colorImbalance > 0 ? lowerColor
+            : consecutiveCount ? invert(player.repeatedColor)
             : COLOR_NONE;
-        player.absoluteColorPreference = imbalance > 1 || consecutiveCount > 1;
+        if (consecutiveCount <= 1u)
+        {
+          player.repeatedColor = COLOR_NONE;
+        }
         player.strongColorPreference =
-          !player.absoluteColorPreference && imbalance;
+          !player.absoluteColorPreference() && player.colorImbalance;
       }
-    }
-
-    if (playedRounds >= maxRounds)
-    {
-      throw BuildLimitExceededException(
-        "This build supports at most "
-          + utility::uintstringconversion::toString(maxRounds)
-          + " rounds.");
     }
   }
 

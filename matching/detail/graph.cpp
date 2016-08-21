@@ -21,17 +21,15 @@
 #include <deque>
 #include <initializer_list>
 #include <iterator>
-#include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "../templateinstantiation.h"
 
 #include "blossomsig.h"
-#include "blossomvertexiteratorimpl.h"
-#include "graphimpl.h"
+#include "graphsig.h"
 #include "parentblossomsig.h"
 #include "rootblossomimpl.h"
-#include "rootblossomiteratorimpl.h"
 #include "types.h"
 #include "verteximpl.h"
 
@@ -41,6 +39,10 @@ namespace matching
   {
     namespace
     {
+      /**
+       * If the provided outer Vertex has a lower dual variable than the current
+       * minimum, update the minimum.
+       */
       template <typename edge_weight>
       void updateMinOuterDualVariable(
         Vertex<edge_weight> &newOuterVertex,
@@ -56,76 +58,146 @@ namespace matching
       }
 
       /**
+       * If the provided outer RootBlossom has a lower minOuterEdgeResistance
+       * than the current minimum, update the minimum.
+       */
+      template <typename edge_weight>
+      void updateMinOuterOuterEdgeResistance(
+        RootBlossom<edge_weight> &newRootBlossom,
+        RootBlossom<edge_weight> *&minOuterOuterEdgeResistanceRootBlossom,
+        edge_weight &minOuterOuterEdgeResistance)
+      {
+        if (newRootBlossom.minOuterEdgeResistance < minOuterOuterEdgeResistance)
+        {
+          minOuterOuterEdgeResistance =
+            newRootBlossom.minOuterEdgeResistance;
+          minOuterOuterEdgeResistanceRootBlossom = &newRootBlossom;
+        }
+        assert(
+          !minOuterOuterEdgeResistanceRootBlossom
+            || !(minOuterOuterEdgeResistance & 1u));
+      }
+
+      /**
+       * If the provided inner RootBlossom has a lower blossom dual variable
+       * than the minimum, update the minimum.
+       */
+      template <typename edge_weight>
+      void updateMinInnerDualVariable(
+        RootBlossom<edge_weight> &newRootBlossom,
+        ParentBlossom<edge_weight> *&minInnerDualVariableBlossom,
+        edge_weight &minInnerDualVariable)
+      {
+        if (!newRootBlossom.rootChild.isVertex)
+        {
+          ParentBlossom<edge_weight> &parentBlossom =
+            static_cast<ParentBlossom<edge_weight> &>(newRootBlossom.rootChild);
+          if (parentBlossom.dualVariable < minInnerDualVariable)
+          {
+            minInnerDualVariable = parentBlossom.dualVariable;
+            minInnerDualVariableBlossom = &parentBlossom;
+          }
+        }
+        assert(!minInnerDualVariableBlossom || !(minInnerDualVariable & 1u));
+      }
+
+      /**
        * If the resistance between the two Vertexes is smaller than the min
        * stored in innerVertex, update the min.
        */
       template <typename edge_weight>
       void updateInnerOuterEdge(
         Vertex<edge_weight> &innerVertex,
-        Vertex<edge_weight> &outerVertex)
+        Vertex<edge_weight> &outerVertex,
+        edge_weight &resistanceStorage)
       {
-        const edge_weight resistance = innerVertex.resistance(outerVertex);
-        if (resistance < innerVertex.minOuterEdgeResistance)
+        outerVertex.resistance(resistanceStorage, innerVertex);
+        if (resistanceStorage < innerVertex.minOuterEdgeResistance)
         {
-          innerVertex.minOuterEdgeResistance = resistance;
+          innerVertex.minOuterEdgeResistance = resistanceStorage;
           innerVertex.minOuterEdge = &outerVertex;
         }
       }
     }
 
     /**
-     * If the resistance between blossom0 and blossom1 is smaller than
-     * minResistance, update the min.
+     * Find the minimum resistance between a Vertex in blossom0 and a Vertex in
+     * blossom1, and save these minimum Vertexes. Update the RootBlossoms'
+     * minOuterEdgeResistance field if appropriate.
      */
     template <typename edge_weight>
-    edge_weight updateOuterOuterEdges(
+    void updateOuterOuterEdges(
       const RootBlossom<edge_weight> &blossom0,
       const RootBlossom<edge_weight> &blossom1,
-      edge_weight minResistance)
+      edge_weight &minResistance,
+      typename
+        std::conditional<
+          std::is_trivially_copyable<edge_weight>::value,
+          edge_weight,
+          edge_weight &
+        >::type
+        resistanceStorage)
     {
+      RootBlossom<edge_weight> &actualBlossom0 =
+        *blossom0.rootChild.rootBlossom;
+      RootBlossom<edge_weight> &actualBlossom1 =
+        *blossom1.rootChild.rootBlossom;
+
+      decltype(resistanceStorage) minResistanceTemp = minResistance;
+
       for (
-        BlossomVertexIterator<edge_weight> vertexIterator0 =
-          blossom0.blossomVertexBegin();
-        vertexIterator0 != blossom0.blossomVertexEnd();
-        ++vertexIterator0)
+        Vertex<edge_weight> *vertexIterator0 =
+          blossom0.rootChild.vertexListHead;
+        vertexIterator0;
+        vertexIterator0 = vertexIterator0->nextVertex)
       {
         for (
-          BlossomVertexIterator<edge_weight> vertexIterator1 =
-            blossom1.blossomVertexBegin();
-          vertexIterator1 != blossom1.blossomVertexEnd();
-          ++vertexIterator1)
+          Vertex<edge_weight> *vertexIterator1 =
+            blossom1.rootChild.vertexListHead;
+          vertexIterator1;
+          vertexIterator1 = vertexIterator1->nextVertex)
         {
-          const edge_weight resistance =
-            vertexIterator0->resistance(*vertexIterator1);
+          vertexIterator0->resistance(resistanceStorage, *vertexIterator1);
 
-          assert(!(resistance & 1u));
+          assert(!(resistanceStorage & 1u));
 
-          if (resistance < minResistance)
+          if (resistanceStorage < minResistanceTemp)
           {
-            minResistance = resistance;
+            minResistanceTemp = resistanceStorage;
 
-            vertexIterator0->rootBlossom
-                ->minOuterEdges
-                [vertexIterator1->rootBlossom->baseVertex->vertexIndex] =
+            actualBlossom0.minOuterEdges
+                [actualBlossom1.baseVertex->vertexIndex] =
               &*vertexIterator0;
-            vertexIterator1->rootBlossom
-                ->minOuterEdges
-                [vertexIterator0->rootBlossom->baseVertex->vertexIndex] =
+            actualBlossom1.minOuterEdges
+                [actualBlossom0.baseVertex->vertexIndex] =
               &*vertexIterator1;
 
-            vertexIterator0->rootBlossom->minOuterEdgeResistance =
-              std::min(
-                vertexIterator0->rootBlossom->minOuterEdgeResistance,
-                minResistance);
-            vertexIterator1->rootBlossom->minOuterEdgeResistance =
-              std::min(
-                vertexIterator1->rootBlossom->minOuterEdgeResistance,
-                minResistance);
+            if (minResistanceTemp < actualBlossom0.minOuterEdgeResistance)
+            {
+              actualBlossom0.minOuterEdgeResistance = minResistanceTemp;
+            }
+            if (minResistanceTemp < actualBlossom1.minOuterEdgeResistance)
+            {
+              actualBlossom1.minOuterEdgeResistance = minResistanceTemp;
+            }
           }
         }
       }
-      return minResistance;
+
+      if (std::is_trivially_copyable<edge_weight>::value)
+      {
+        minResistance = minResistanceTemp;
+      }
     }
+
+#define UPDATE_OUTER_OUTER_EDGES_INSTANTIATION(a) \
+template void updateOuterOuterEdges( \
+const RootBlossom<a> &, \
+const RootBlossom<a> &, \
+a &, \
+typename std::conditional<std::is_trivially_copyable<a>::value, a, a &>::type);
+    INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(
+      UPDATE_OUTER_OUTER_EDGES_INSTANTIATION)
 
     /**
      * Set the label member of all the RootBlossoms, and set labeledVertex and
@@ -135,9 +207,8 @@ namespace matching
     void Graph<edge_weight>::initializeLabeling() const &
     {
       for (
-        RootBlossomIterator<edge_weight> rootBlossomIterator =
-          rootBlossomBegin();
-        rootBlossomIterator != rootBlossomEnd();
+        auto rootBlossomIterator = rootBlossomPool.begin();
+        rootBlossomIterator != rootBlossomPool.end();
         ++rootBlossomIterator)
       {
         rootBlossomIterator->label =
@@ -156,19 +227,22 @@ namespace matching
     template <typename edge_weight>
     void Graph<edge_weight>::updateInnerOuterEdges(
       const RootBlossom<edge_weight> &outerBlossom
-    ) const &
+    ) &
     {
-      for (const std::unique_ptr<Vertex<edge_weight>> &innerVertex : *this)
+      edge_weight resistance = aboveMaxEdgeWeight;
+      for (Vertex<edge_weight> &innerVertex : *this)
       {
-        if (innerVertex->rootBlossom->label != LABEL_OUTER)
+        if (innerVertex.rootBlossom->label != LABEL_OUTER)
         {
           for (
-            BlossomVertexIterator<edge_weight> vertexIterator =
-              outerBlossom.blossomVertexBegin();
-            vertexIterator != outerBlossom.blossomVertexEnd();
-            ++vertexIterator)
+            auto outerVertexIterator = outerBlossom.rootChild.vertexListHead;
+            outerVertexIterator;
+            outerVertexIterator = outerVertexIterator->nextVertex)
           {
-            updateInnerOuterEdge(*innerVertex, *vertexIterator);
+            updateInnerOuterEdge(
+              innerVertex,
+              *outerVertexIterator,
+              resistance);
           }
         }
       }
@@ -179,25 +253,27 @@ namespace matching
      * their values.
      */
     template <typename edge_weight>
-    void Graph<edge_weight>::initializeInnerOuterEdges() const &
+    void Graph<edge_weight>::initializeInnerOuterEdges() &
     {
-      std::deque<Vertex<edge_weight> *> outerVertices;
-      for (const std::unique_ptr<Vertex<edge_weight>> &outerVertex : *this)
+      std::vector<Vertex<edge_weight> *> outerVertices;
+      outerVertices.reserve(this->size());
+      for (Vertex<edge_weight> &outerVertex : *this)
       {
-        if (outerVertex->rootBlossom->label == LABEL_OUTER)
+        if (outerVertex.rootBlossom->label == LABEL_OUTER)
         {
-          outerVertices.push_back(outerVertex.get());
+          outerVertices.push_back(&outerVertex);
         }
       }
-      for (const std::unique_ptr<Vertex<edge_weight>> &innerVertex : *this)
+      edge_weight resistance = aboveMaxEdgeWeight;
+      for (Vertex<edge_weight> &innerVertex : *this)
       {
-        if (innerVertex->rootBlossom->label != LABEL_OUTER)
+        if (innerVertex.rootBlossom->label != LABEL_OUTER)
         {
-          innerVertex->minOuterEdgeResistance = maxEdgeWeight * 2u + 1u;
+          innerVertex.minOuterEdgeResistance = aboveMaxEdgeWeight;
 
           for (Vertex<edge_weight> *outerVertex : outerVertices)
           {
-            updateInnerOuterEdge(*innerVertex, *outerVertex);
+            updateInnerOuterEdge(innerVertex, *outerVertex, resistance);
           }
         }
       }
@@ -209,25 +285,50 @@ namespace matching
      */
     template <typename edge_weight>
     void Graph<edge_weight>::initializeOuterOuterEdges(
-      RootBlossom<edge_weight> &blossom0
+      RootBlossom<edge_weight> &blossom0,
+      edge_weight &resistanceStorage0,
+      edge_weight &resistanceStorage1
     ) const &
     {
-      blossom0.minOuterEdgeResistance = maxEdgeWeight * 2u + 1u;
+      blossom0.minOuterEdgeResistance = aboveMaxEdgeWeight;
       for (
-        RootBlossomIterator<edge_weight> iterator = rootBlossomBegin();
-        iterator != rootBlossomEnd();
+        auto iterator = rootBlossomPool.begin();
+        iterator != rootBlossomPool.end();
         ++iterator)
       {
+        resistanceStorage0 = aboveMaxEdgeWeight;
         if (iterator->label == LABEL_OUTER && &blossom0 != &*iterator)
         {
           blossom0.minOuterEdges[iterator->baseVertex->vertexIndex] =
             nullptr;
-          updateOuterOuterEdges(
-            blossom0,
-            *iterator,
-            maxEdgeWeight * 2u + 1u);
+          if (std::is_trivially_copyable<edge_weight>::value)
+          {
+            edge_weight storage;
+            updateOuterOuterEdges(
+              blossom0,
+              *iterator,
+              resistanceStorage0,
+              storage);
+          }
+          else
+          {
+            updateOuterOuterEdges(
+              blossom0,
+              *iterator,
+              resistanceStorage0,
+              resistanceStorage1);
+          }
         }
       }
+    }
+    template <typename edge_weight>
+    void Graph<edge_weight>::initializeOuterOuterEdges(
+      RootBlossom<edge_weight> &blossom0
+    ) const &
+    {
+      edge_weight resistance0 = aboveMaxEdgeWeight;
+      edge_weight resistance1 = aboveMaxEdgeWeight;
+      initializeOuterOuterEdges(blossom0, resistance0, resistance1);
     }
 
     /**
@@ -237,24 +338,69 @@ namespace matching
     template <typename edge_weight>
     void Graph<edge_weight>::initializeOuterOuterEdges() const &
     {
+      edge_weight resistance0 = aboveMaxEdgeWeight;
+      edge_weight resistance1 = aboveMaxEdgeWeight;
       for (
-        RootBlossomIterator<edge_weight> iterator0 = rootBlossomBegin();
-        iterator0 != rootBlossomEnd();
+        auto iterator0 = rootBlossomPool.begin();
+        iterator0 != rootBlossomPool.end();
         ++iterator0)
       {
         if (iterator0->label == LABEL_OUTER)
         {
-          iterator0->minOuterEdgeResistance = maxEdgeWeight * 2u + 1u;
+          initializeOuterOuterEdges(*iterator0, resistance0, resistance1);
         }
       }
+    }
+
+    /**
+     * Compute the minimum resistance between outer vertices in different
+     * RootBlossoms.
+     */
+    template <typename edge_weight>
+    void Graph<edge_weight>::initializeMinOuterOuterEdgeResistance(
+      RootBlossom<edge_weight> *&minOuterOuterEdgeResistanceRootBlossom,
+      edge_weight &minOuterOuterEdgeResistance
+    ) const
+    {
+      minOuterOuterEdgeResistance = aboveMaxEdgeWeight;
+      minOuterOuterEdgeResistanceRootBlossom = nullptr;
       for (
-        RootBlossomIterator<edge_weight> iterator0 = rootBlossomBegin();
-        iterator0 != rootBlossomEnd();
-        ++iterator0)
+        auto rootBlossomIterator = rootBlossomPool.begin();
+        rootBlossomIterator != rootBlossomPool.end();
+        ++rootBlossomIterator)
       {
-        if (iterator0->label == LABEL_OUTER)
+        if (rootBlossomIterator->label == LABEL_OUTER)
         {
-          initializeOuterOuterEdges(*iterator0);
+          updateMinOuterOuterEdgeResistance(
+            *rootBlossomIterator,
+            minOuterOuterEdgeResistanceRootBlossom,
+            minOuterOuterEdgeResistance);
+        }
+      }
+    }
+
+    /**
+     * Compute the minimum blossom dual variable among inner blossoms.
+     */
+    template <typename edge_weight>
+    void Graph<edge_weight>::initializeMinInnerDualVariable(
+      ParentBlossom<edge_weight> *&minInnerDualVariableBlossom,
+      edge_weight &minInnerDualVariable
+    ) const
+    {
+      minInnerDualVariable = aboveMaxEdgeWeight;
+      minInnerDualVariableBlossom = nullptr;
+      for (
+        auto rootBlossomIterator = rootBlossomPool.begin();
+        rootBlossomIterator != rootBlossomPool.end();
+        ++rootBlossomIterator)
+      {
+        if (rootBlossomIterator->label == LABEL_INNER)
+        {
+          updateMinInnerDualVariable(
+            *rootBlossomIterator,
+            minInnerDualVariableBlossom,
+            minInnerDualVariable);
         }
       }
     }
@@ -264,20 +410,20 @@ namespace matching
      * vertices.
      */
     template <typename edge_weight>
-    bool Graph<edge_weight>::augmentMatching() const &
+    bool Graph<edge_weight>::augmentMatching() &
     {
       initializeLabeling();
 
-      edge_weight minOuterDualVariable = maxEdgeWeight * 2u + 1u;
+      edge_weight minOuterDualVariable = aboveMaxEdgeWeight;
       Vertex<edge_weight> *minOuterDualVariableVertex{ };
-      for (const std::unique_ptr<Vertex<edge_weight>> &vertex : *this)
+      for (Vertex<edge_weight> &vertex : *this)
       {
-        assert(vertex->dualVariable <= maxEdgeWeight);
+        assert(vertex.dualVariable <= aboveMaxEdgeWeight >> 1);
 
-        if (vertex->rootBlossom->label == LABEL_OUTER)
+        if (vertex.rootBlossom->label == LABEL_OUTER)
         {
           updateMinOuterDualVariable(
-            *vertex,
+            vertex,
             minOuterDualVariableVertex,
             minOuterDualVariable);
         }
@@ -290,71 +436,34 @@ namespace matching
       initializeInnerOuterEdges();
       initializeOuterOuterEdges();
 
+      // Set up variables needed to choose the dual variable adjustment, which
+      // will be update incrementally.
+      edge_weight minOuterOuterEdgeResistance = aboveMaxEdgeWeight;
+      RootBlossom<edge_weight> *minOuterOuterEdgeResistanceRootBlossom;
+      initializeMinOuterOuterEdgeResistance(
+        minOuterOuterEdgeResistanceRootBlossom,
+        minOuterOuterEdgeResistance);
+
+      edge_weight minInnerDualVariable = aboveMaxEdgeWeight;
+      ParentBlossom<edge_weight> *minInnerDualVariableBlossom{ };
+
       // The loop for manipulating blossoms and adjusting the dual variables.
       while (true)
       {
-        // Compute the variables needed to choose the dual variable adjustment.
-        edge_weight minInnerOuterEdgeResistance = maxEdgeWeight * 2u + 1u;
+        // Compute variables needed to choose the dual variable adjustment.
+        edge_weight minInnerOuterEdgeResistance = aboveMaxEdgeWeight;
         Vertex<edge_weight> *minInnerOuterEdgeResistanceVertex{ };
-        for (const std::unique_ptr<Vertex<edge_weight>> &vertex : *this)
+        for (Vertex<edge_weight> &vertex : *this)
         {
           if (
-            (vertex->rootBlossom->label == LABEL_FREE
-                || vertex->rootBlossom->label == LABEL_ZERO
-            ) && vertex->minOuterEdgeResistance < minInnerOuterEdgeResistance
+            (vertex.rootBlossom->label == LABEL_FREE
+                || vertex.rootBlossom->label == LABEL_ZERO
+            ) && vertex.minOuterEdgeResistance < minInnerOuterEdgeResistance
           ) {
-            minInnerOuterEdgeResistance = vertex->minOuterEdgeResistance;
-            minInnerOuterEdgeResistanceVertex = vertex.get();
+            minInnerOuterEdgeResistance = vertex.minOuterEdgeResistance;
+            minInnerOuterEdgeResistanceVertex = &vertex;
           }
         }
-
-        edge_weight minOuterOuterEdgeResistance = maxEdgeWeight * 2u + 1u;
-        RootBlossom<edge_weight> *minOuterOuterEdgeResistanceRootBlossom{ };
-        for (
-          RootBlossomIterator<edge_weight> rootBlossomIterator =
-            rootBlossomBegin();
-          rootBlossomIterator != rootBlossomEnd();
-          ++rootBlossomIterator)
-        {
-          if (
-            rootBlossomIterator->label == LABEL_OUTER
-              && rootBlossomIterator->minOuterEdgeResistance
-                  < minOuterOuterEdgeResistance)
-          {
-            minOuterOuterEdgeResistance =
-              rootBlossomIterator->minOuterEdgeResistance;
-            minOuterOuterEdgeResistanceRootBlossom = &*rootBlossomIterator;
-          }
-        }
-        assert(
-          !minOuterOuterEdgeResistanceRootBlossom
-            || !(minOuterOuterEdgeResistance & 1));
-        minOuterOuterEdgeResistance >>= 1;
-
-        edge_weight minInnerDualVariable = maxEdgeWeight * 2u + 1u;
-        ParentBlossom<edge_weight> *minInnerDualVariableBlossom{ };
-        for (
-          RootBlossomIterator<edge_weight> rootBlossomIterator =
-            rootBlossomBegin();
-          rootBlossomIterator != rootBlossomEnd();
-          ++rootBlossomIterator)
-        {
-          if (
-            rootBlossomIterator->label == LABEL_INNER
-              && !rootBlossomIterator->rootChild.isVertex)
-          {
-            ParentBlossom<edge_weight> &parentBlossom =
-              static_cast<ParentBlossom<edge_weight> &>(
-                rootBlossomIterator->rootChild);
-            if (parentBlossom.dualVariable < minInnerDualVariable)
-            {
-              minInnerDualVariable = parentBlossom.dualVariable;
-              minInnerDualVariableBlossom = &parentBlossom;
-            }
-          }
-        }
-        assert(!minInnerDualVariableBlossom || !(minInnerDualVariable & 1u));
-        minInnerDualVariable >>= 1;
 
         // Adjust the dual variables.
         const edge_weight dualAdjustment =
@@ -362,64 +471,63 @@ namespace matching
             {
               minOuterDualVariable,
               minInnerOuterEdgeResistance,
-              minOuterOuterEdgeResistance,
-              minInnerDualVariable
+              edge_weight(minOuterOuterEdgeResistance >> 1),
+              edge_weight(minInnerDualVariable >> 1)
             }
           );
-        minOuterDualVariable -= dualAdjustment;
-        minInnerOuterEdgeResistance -= dualAdjustment;
-        minOuterOuterEdgeResistance -= dualAdjustment;
-        minInnerDualVariable -= dualAdjustment;
-        const edge_weight twiceAdjustment = dualAdjustment << 1;
-
-        for (
-          RootBlossomIterator<edge_weight> rootBlossomIterator =
-            rootBlossomBegin();
-          rootBlossomIterator != rootBlossomEnd();
-          ++rootBlossomIterator)
+        if (dualAdjustment)
         {
-          if (rootBlossomIterator->label == LABEL_OUTER)
-          {
-            if (
-              rootBlossomIterator->minOuterEdgeResistance <= maxEdgeWeight * 2u)
-            {
-              rootBlossomIterator->minOuterEdgeResistance -= twiceAdjustment;
-            }
-            if (!rootBlossomIterator->rootChild.isVertex)
-            {
-              static_cast<ParentBlossom<edge_weight> &>(
-                rootBlossomIterator->rootChild
-              ).dualVariable += twiceAdjustment;
-            }
-          }
-          else if (
-            rootBlossomIterator->label == LABEL_INNER
-              && !rootBlossomIterator->rootChild.isVertex)
-          {
-            static_cast<ParentBlossom<edge_weight> &>(
-                rootBlossomIterator->rootChild
-              ).dualVariable -= twiceAdjustment;
-          }
+          edge_weight twiceAdjustment = dualAdjustment << 1;
+          minOuterDualVariable -= dualAdjustment;
+          minInnerOuterEdgeResistance -= dualAdjustment;
+          minOuterOuterEdgeResistance -= twiceAdjustment;
+          minInnerDualVariable -= twiceAdjustment;
+
           for (
-            BlossomVertexIterator<edge_weight> vertexIterator =
-              rootBlossomIterator->blossomVertexBegin();
-            vertexIterator != rootBlossomIterator->blossomVertexEnd();
+            typename Graph<edge_weight>::iterator vertexIterator =
+              this->begin();
+            vertexIterator != this->end();
             ++vertexIterator)
           {
-            if (rootBlossomIterator->label == LABEL_OUTER)
+            RootBlossom<edge_weight> &rootBlossom =
+              *vertexIterator->rootBlossom;
+            Label label = rootBlossom.label;
+            if (label == LABEL_OUTER)
             {
               vertexIterator->dualVariable -= dualAdjustment;
             }
-            else if (rootBlossomIterator->label == LABEL_INNER)
+            else if (label == LABEL_INNER)
             {
               vertexIterator->dualVariable += dualAdjustment;
             }
             else if (
-              vertexIterator->minOuterEdgeResistance <= maxEdgeWeight * 2u)
+              vertexIterator->minOuterEdgeResistance < aboveMaxEdgeWeight)
             {
               vertexIterator->minOuterEdgeResistance -= dualAdjustment;
             }
-            assert(vertexIterator->dualVariable <= maxEdgeWeight);
+            assert(vertexIterator->dualVariable <= aboveMaxEdgeWeight >> 1);
+            if (rootBlossom.baseVertex == &*vertexIterator)
+            {
+              if (label == LABEL_OUTER)
+              {
+                if (rootBlossom.minOuterEdgeResistance < aboveMaxEdgeWeight)
+                {
+                  rootBlossom.minOuterEdgeResistance -= twiceAdjustment;
+                }
+                if (!rootBlossom.rootChild.isVertex)
+                {
+                  static_cast<ParentBlossom<edge_weight> &>(
+                    rootBlossom.rootChild
+                  ).dualVariable += twiceAdjustment;
+                }
+              }
+              else if (label == LABEL_INNER && !rootBlossom.rootChild.isVertex)
+              {
+                static_cast<ParentBlossom<edge_weight> &>(
+                    rootBlossom.rootChild
+                  ).dualVariable -= twiceAdjustment;
+              }
+            }
           }
         }
 
@@ -430,70 +538,33 @@ namespace matching
           augmentToSource<edge_weight>(minOuterDualVariableVertex, nullptr);
           return true;
         }
-        else if (!minInnerOuterEdgeResistance)
+        if (
+          !minInnerOuterEdgeResistance
+            && minInnerOuterEdgeResistanceVertex->rootBlossom->label
+                == LABEL_ZERO)
         {
-          if (
-            minInnerOuterEdgeResistanceVertex->rootBlossom->label
-              == LABEL_FREE)
-          {
-            // The resistance between a FREE Vertex and an OUTER Vertex is 0.
-            // Label the FREE Vertex and its match.
-            RootBlossom<edge_weight> &matchedRootBlossom =
-              *minInnerOuterEdgeResistanceVertex->rootBlossom
-                ->baseVertexMatch
-                ->rootBlossom;
-            minInnerOuterEdgeResistanceVertex->rootBlossom->label =
-              LABEL_INNER;
-            matchedRootBlossom.label = LABEL_OUTER;
-            minInnerOuterEdgeResistanceVertex->rootBlossom->labelingVertex =
-              minInnerOuterEdgeResistanceVertex->minOuterEdge;
-            minInnerOuterEdgeResistanceVertex->rootBlossom->labeledVertex =
-              minInnerOuterEdgeResistanceVertex;
-            updateInnerOuterEdges(matchedRootBlossom);
-            initializeOuterOuterEdges(matchedRootBlossom);
-            for (
-              BlossomVertexIterator<edge_weight> iterator =
-                matchedRootBlossom.blossomVertexBegin();
-              iterator != matchedRootBlossom.blossomVertexEnd();
-              ++iterator)
-            {
-              updateMinOuterDualVariable(
-                *iterator,
-                minOuterDualVariableVertex,
-                minOuterDualVariable);
-            }
+          // The resistance between a ZERO Vertex and an OUTER Vertex is 0.
+          // Augment from the ZERO Vertex to the OUTER Vertex.
 
-            continue;
-          }
-          else
-          {
-            // The resistance between a ZERO Vertex and an OUTER Vertex is 0.
-            // Augment from the ZERO Vertex to the OUTER Vertex.
-            assert(
-              minInnerOuterEdgeResistanceVertex->rootBlossom->label
-                == LABEL_ZERO);
+          augmentToSource(
+            minInnerOuterEdgeResistanceVertex->minOuterEdge,
+            minInnerOuterEdgeResistanceVertex);
+          augmentToSource(
+            minInnerOuterEdgeResistanceVertex,
+            minInnerOuterEdgeResistanceVertex->minOuterEdge);
 
-            augmentToSource(
-              minInnerOuterEdgeResistanceVertex->minOuterEdge,
-              minInnerOuterEdgeResistanceVertex);
-            augmentToSource(
-              minInnerOuterEdgeResistanceVertex,
-              minInnerOuterEdgeResistanceVertex->minOuterEdge);
-
-            return true;
-          }
+          return true;
         }
         else if (!minOuterOuterEdgeResistance)
         {
           // The resistance between two OUTER Vertexes is zero.
           Vertex<edge_weight> *vertex0, *vertex1;
           for (
-            RootBlossomIterator<edge_weight> rootBlossomIterator =
-              rootBlossomBegin();
+            auto rootBlossomIterator = rootBlossomPool.begin();
             ;
             ++rootBlossomIterator)
           {
-            assert(rootBlossomIterator != rootBlossomEnd());
+            assert(rootBlossomIterator != rootBlossomPool.end());
 
             if (
               rootBlossomIterator->label == LABEL_OUTER
@@ -510,7 +581,7 @@ namespace matching
                   [minOuterOuterEdgeResistanceRootBlossom
                     ->baseVertex
                     ->vertexIndex];
-              if (vertex0 && vertex1 && vertex0->resistance(*vertex1) <= 0)
+              if (vertex0 && vertex1 && !vertex0->resistance(*vertex1))
               {
                 break;
               }
@@ -552,21 +623,26 @@ namespace matching
               path.pop_back();
             }
             assert(path.front()->rootBlossom->label == LABEL_OUTER);
-            RootBlossom<edge_weight> *const newBlossom =
-              new RootBlossom<edge_weight>(path.cbegin(), path.cend(), *this);
+            RootBlossom<edge_weight> &newBlossom =
+              rootBlossomPool.construct(path.cbegin(), path.cend(), *this);
 
-            assert(newBlossom->label == LABEL_OUTER);
+            assert(newBlossom.label == LABEL_OUTER);
             for (
-              BlossomVertexIterator<edge_weight> iterator =
-                newBlossom->blossomVertexBegin();
-              iterator != newBlossom->blossomVertexEnd();
-              ++iterator)
+              auto iterator = newBlossom.rootChild.vertexListHead;
+              iterator;
+              iterator = iterator->nextVertex)
             {
               updateMinOuterDualVariable(
                 *iterator,
                 minOuterDualVariableVertex,
                 minOuterDualVariable);
             }
+            initializeMinOuterOuterEdgeResistance(
+              minOuterOuterEdgeResistanceRootBlossom,
+              minOuterOuterEdgeResistance);
+            initializeMinInnerDualVariable(
+              minInnerDualVariableBlossom,
+              minInnerDualVariable);
           }
           else
           {
@@ -577,8 +653,52 @@ namespace matching
             return true;
           }
         }
+        else if (!minInnerOuterEdgeResistance)
+        {
+          // The resistance between a FREE Vertex and an OUTER Vertex is 0.
+          // Label the FREE Vertex and its match.
+          assert(
+            minInnerOuterEdgeResistanceVertex->rootBlossom->label
+              == LABEL_FREE);
+
+          RootBlossom<edge_weight> &matchedRootBlossom =
+            *minInnerOuterEdgeResistanceVertex->rootBlossom
+              ->baseVertexMatch
+              ->rootBlossom;
+          minInnerOuterEdgeResistanceVertex->rootBlossom->label =
+            LABEL_INNER;
+          matchedRootBlossom.label = LABEL_OUTER;
+          minInnerOuterEdgeResistanceVertex->rootBlossom->labelingVertex =
+            minInnerOuterEdgeResistanceVertex->minOuterEdge;
+          minInnerOuterEdgeResistanceVertex->rootBlossom->labeledVertex =
+            minInnerOuterEdgeResistanceVertex;
+          updateInnerOuterEdges(matchedRootBlossom);
+          initializeOuterOuterEdges(matchedRootBlossom);
+          for (
+            auto iterator = matchedRootBlossom.rootChild.vertexListHead;
+            iterator;
+            iterator = iterator->nextVertex)
+          {
+            updateMinOuterDualVariable(
+              *iterator,
+              minOuterDualVariableVertex,
+              minOuterDualVariable);
+          }
+          updateMinOuterOuterEdgeResistance(
+            matchedRootBlossom,
+            minOuterOuterEdgeResistanceRootBlossom,
+            minOuterOuterEdgeResistance);
+          updateMinInnerDualVariable(
+            *minInnerOuterEdgeResistanceVertex->rootBlossom,
+            minInnerDualVariableBlossom,
+            minInnerDualVariable);
+
+          continue;
+        }
         else if (!minInnerDualVariable)
         {
+          rootBlossomPool.hide(*minInnerDualVariableBlossom->rootBlossom);
+
           // An INNER RootBlossom has dualVariable zero. Dissolve it.
           Vertex<edge_weight> &rootVertex =
             *minInnerDualVariableBlossom->rootBlossom->baseVertex;
@@ -618,7 +738,7 @@ namespace matching
                     ? LABEL_INNER
                     : LABEL_OUTER;
 
-            new RootBlossom<edge_weight>(
+            rootBlossomPool.construct(
               *currentChild,
               &rootChild == currentChild ? rootVertex
                 : linksToNext ? *currentChild->vertexToNextSiblingBlossom
@@ -642,22 +762,26 @@ namespace matching
                     ? connectForward
                         ? currentChild->vertexToNextSiblingBlossom
                         : currentChild->vertexToPreviousSiblingBlossom
-                    : nullptr);
+                    : nullptr,
+              *this);
             if (label == LABEL_OUTER)
             {
               updateInnerOuterEdges(*currentChild->rootBlossom);
               initializeOuterOuterEdges(*currentChild->rootBlossom);
               for (
-                BlossomVertexIterator<edge_weight> iterator =
-                  currentChild->rootBlossom->blossomVertexBegin();
-                iterator != currentChild->rootBlossom->blossomVertexEnd();
-                ++iterator)
+                auto iterator = currentChild->vertexListHead;
+                iterator;
+                iterator = iterator->nextVertex)
               {
                 updateMinOuterDualVariable(
                   *iterator,
                   minOuterDualVariableVertex,
                   minOuterDualVariable);
               }
+              updateMinOuterOuterEdgeResistance(
+                *currentChild->rootBlossom,
+                minOuterOuterEdgeResistanceRootBlossom,
+                minOuterOuterEdgeResistance);
             }
 
             if (currentChild == &(connectForward ? connectChild : rootChild))
@@ -667,6 +791,13 @@ namespace matching
             linksToNext = !linksToNext;
             previousChild = currentChild;
           }
+
+          rootBlossomPool.destroy(*minInnerDualVariableBlossom->rootBlossom);
+          parentBlossomPool.destroy(*minInnerDualVariableBlossom);
+
+          initializeMinInnerDualVariable(
+            minInnerDualVariableBlossom,
+            minInnerDualVariable);
         }
       }
     }
@@ -675,23 +806,24 @@ namespace matching
      * Find the maximum matching for the graph.
      */
     template <typename edge_weight>
-    void Graph<edge_weight>::computeMatching() const &
+    void Graph<edge_weight>::computeMatching() &
     {
       // Make sure all exposed Vertex dualVariables have the same parity.
       for (
-        RootBlossomIterator<edge_weight> rootBlossomIterator =
-          rootBlossomBegin();
-        rootBlossomIterator != rootBlossomEnd();
-        ++rootBlossomIterator)
+        auto rootBlossomIterator = rootBlossomPool.begin();
+        rootBlossomIterator != rootBlossomPool.end();
+      )
       {
+        RootBlossom<edge_weight> &rootBlossom = *rootBlossomIterator;
+        ++rootBlossomIterator;
         if (
-          !rootBlossomIterator->baseVertexMatch
-            && rootBlossomIterator->baseVertex->dualVariable & 1)
+          !rootBlossom.baseVertexMatch
+            && rootBlossom.baseVertex->dualVariable & 1u)
         {
           Blossom<edge_weight> *adjustableBlossom =
-            &rootBlossomIterator->rootChild;
+            &rootBlossom.rootChild;
           setPointersFromAncestor(
-            *rootBlossomIterator->baseVertex,
+            *rootBlossom.baseVertex,
             *adjustableBlossom,
             true);
 
@@ -706,7 +838,7 @@ namespace matching
                 adjustableBlossom
               )->subblossom;
           }
-          rootBlossomIterator->freeAncestorOfBase(*adjustableBlossom);
+          rootBlossom.freeAncestorOfBase(*adjustableBlossom, *this);
 
           if (!adjustableBlossom->isVertex)
           {
@@ -717,13 +849,12 @@ namespace matching
 
             static_cast<ParentBlossom<edge_weight> *const>(
               adjustableBlossom
-            )->dualVariable -= 2;
+            )->dualVariable -= 2u;
           }
           for (
-            BlossomVertexIterator<edge_weight> vertexIterator =
-              rootBlossomIterator->blossomVertexBegin();
-            vertexIterator != rootBlossomIterator->blossomVertexEnd();
-            ++vertexIterator)
+            auto vertexIterator = adjustableBlossom->vertexListHead;
+            vertexIterator;
+            vertexIterator = vertexIterator->nextVertex)
           {
             ++vertexIterator->dualVariable;
             assert(!(vertexIterator->dualVariable & 1u));
@@ -735,6 +866,7 @@ namespace matching
       while (augmentMatching()) { }
     }
 
-    MATCHINGEDGEWEIGHTPARAMETERS1(template class Graph<, >;)
+#define GRAPH_INSTANTIATION(a) template class Graph<a>;
+    INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(GRAPH_INSTANTIATION)
   }
 }

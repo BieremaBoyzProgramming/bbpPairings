@@ -20,19 +20,17 @@
 #define PARENTBLOSSOMIMPL_H
 
 #include <deque>
+#include <iterator>
 
 #include "blossomsig.h"
 #include "parentblossomsig.h"
+#include "rootblossomsig.h"
+#include "vertexsig.h"
 
 namespace matching
 {
   namespace detail
   {
-    template <typename>
-    class RootBlossom;
-    template <typename>
-    struct Vertex;
-
     /**
      * Construct a blossom from the sequence of vertices referenced by begin
      * and end. Each subblossom is represented by two vertices, and
@@ -45,7 +43,12 @@ namespace matching
         RootBlossom<edge_weight> &rootBlossom_,
         const PathIterator begin,
         const PathIterator end)
-      : Blossom<edge_weight>(rootBlossom_, false)
+      : Blossom<edge_weight>(
+          rootBlossom_,
+          *(*std::prev(end, 2))->rootBlossom->rootChild.vertexListHead,
+          *(*begin)->rootBlossom->rootChild.vertexListTail,
+          false),
+          dualVariable((*begin)->dualVariable & 0u)
     {
       connectChildren(begin, end);
     }

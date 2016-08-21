@@ -28,6 +28,7 @@
 #include "checker.h"
 #include "tournament.h"
 
+#ifndef OMIT_CHECKER
 namespace tournament
 {
   namespace checker
@@ -150,6 +151,7 @@ namespace tournament
           if (!correctMatching.empty())
           {
             swisssystems::sortResults(providedMatching, tournament);
+            swisssystems::sortResults(correctMatching, tournament);
 
             std::cout << "  Checker pairings"
               << std::setfill(' ')
@@ -233,3 +235,4 @@ namespace tournament
     }
   }
 }
+#endif

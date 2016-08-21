@@ -306,18 +306,20 @@ namespace fileformats
             }
             matches.insert(matches.end(), skippedRounds, tournament::Match(id));
             skippedRounds = 0;
-            tournament.playedRounds =
-              std::max(tournament.playedRounds, matches.size());
+            if (matches.size() > tournament.playedRounds)
+            {
+              tournament.playedRounds = matches.size();
+            }
             matches.emplace_back(
               opponent,
               color,
               matchScore,
               gameWasPlayed,
               participatedInPairing);
-            if (participatedInPairing)
+            if (
+              participatedInPairing && matches.size() > tournament.playedRounds)
             {
-              tournament.playedRounds =
-                std::max(tournament.playedRounds, matches.size());
+              tournament.playedRounds = matches.size();
             }
             if (matches.size() - 1u > tournament.playedRounds)
             {
@@ -424,21 +426,29 @@ namespace fileformats
        * Finalize the number of played rounds in the tournament, and add empty
        * games to the end of the list of matches for each player who doesn't
        * have enough.
+       *
+       * If includesUnpairedRound is true, then the records in the last column
+       * will be considered byes for the next round, if that makes sense. In all
+       * other cases, all notated matches are considered past matches.
        */
-      void evenUpMatchHistories(tournament::Tournament &tournament)
+      void evenUpMatchHistories(
+        tournament::Tournament &tournament,
+        const bool includesUnpairedRound)
       {
-        bool forwardRoundIsComplete = true;
+        bool forwardRoundIsComplete = includesUnpairedRound;
         for (const tournament::Player &player : tournament.players)
         {
           if (player.isValid)
           {
-            if (player.matches.size() <= tournament.playedRounds)
+            if (
+              includesUnpairedRound
+                ^ (player.matches.size() > tournament.playedRounds))
             {
-              forwardRoundIsComplete = false;
+              forwardRoundIsComplete = !includesUnpairedRound;
             }
           }
         }
-        if (forwardRoundIsComplete)
+        if (tournament.playersByRank.size() && forwardRoundIsComplete)
         {
           ++tournament.playedRounds;
         }
@@ -709,6 +719,9 @@ namespace fileformats
     /**
      * Read a TRF(x) file, and return a Tournament containing the parsed data.
      * If data is not 0, store the file contents there.
+     * If includesUnpairedRound is true, then we are being asked to pair the
+     * next round, so we should look for future-round byes and require that the
+     * total number of rounds in the tournament be specified.
      *
      * @throws FileFormatException if we detect that the file is not formatted
      * properly or contains inconsistent data.
@@ -717,7 +730,10 @@ namespace fileformats
      * @throws FileReaderException on other exceptional conditions, such as an
      * unreadable file.
      */
-    tournament::Tournament readFile(std::istream &stream, FileData *const data)
+    tournament::Tournament readFile(
+      std::istream &stream,
+      const bool includesUnpairedRound,
+      FileData *const data)
     {
       tournament::Tournament result;
       bool useRank{ };
@@ -859,11 +875,23 @@ namespace fileformats
         throw FileFormatException("A pairing number is missing.");
       }
 
-      evenUpMatchHistories(result);
-      if (result.expectedRounds && result.playedRounds > result.expectedRounds)
+      evenUpMatchHistories(result, includesUnpairedRound);
+      if (
+        result.expectedRounds
+          && result.playedRounds > result.expectedRounds - includesUnpairedRound
+      )
       {
         throw FileFormatException(
           "The number of rounds is larger than the reported number of rounds.");
+      }
+      else if (includesUnpairedRound && !result.expectedRounds)
+      {
+        throw FileFormatException(
+          "The total number of rounds in the tournament must be specified.");
+      }
+      else if (!result.expectedRounds)
+      {
+        result.expectedRounds = result.playedRounds;
       }
       computePlayerIndexes(result, useRank);
       if (result.initialColor == tournament::COLOR_NONE)
@@ -887,6 +915,13 @@ namespace fileformats
       const std::vector<tournament::player_index> ranks =
         computeRanks(tournament);
       outputStream << std::setfill(' ') << std::right;
+      if (tournament.playedRounds < tournament.expectedRounds)
+      {
+        outputStream
+          << "XXR "
+          << utility::uintstringconversion::toString(tournament.expectedRounds)
+          << '\r';
+      }
       for (const tournament::Player &player : tournament.players)
       {
         if (player.id > 9999u)
@@ -980,12 +1015,23 @@ namespace fileformats
         );
       }
 
+      bool roundsLine;
       for (const std::u32string &line : modelFileData.lines)
       {
+        if (line.length() >= 3 && line.substr(0, 3) == U"XXR")
+        {
+          roundsLine = true;
+        }
         if (line.length() < 3 || line.substr(0, 3) != U"012")
         {
           outputStream << convert.to_bytes(line) << '\r';
         }
+      }
+      if (!roundsLine)
+      {
+        outputStream << "XXR "
+          << utility::uintstringconversion::toString(tournament.expectedRounds)
+          << '\r';
       }
     }
   }

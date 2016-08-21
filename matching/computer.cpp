@@ -16,18 +16,15 @@
  */
 
 
-#include <algorithm>
 #include <cassert>
-#include <memory>
+#include <limits>
 #include <vector>
 
 #include "computer.h"
 #include "templateinstantiation.h"
 
-#include "detail/blossommatchingiteratorimpl.h"
 #include "detail/graphimpl.h"
 #include "detail/rootblossomimpl.h"
-#include "detail/rootblossomiteratorimpl.h"
 #include "detail/types.h"
 #include "detail/verteximpl.h"
 
@@ -38,10 +35,26 @@ namespace matching
     using namespace detail;
   }
 
+  /**
+   * Construct a new maximum matching computer that supports at most the
+   * specified number of nodes and at most the specified edge weight.
+   */
   template <typename edge_weight>
-  Computer<edge_weight>::Computer() : graph(new Graph<edge_weight>) { }
+  Computer<edge_weight>::Computer(
+      const Computer<edge_weight>::size_type capacity,
+      const edge_weight &maxEdgeWeight)
+    : graph(new Graph<edge_weight>(capacity, maxEdgeWeight)) { }
   template <typename edge_weight>
   Computer<edge_weight>::~Computer() noexcept = default;
+
+  /**
+   * Return the number of nodes currently in the matching graph.
+   */
+  template <typename edge_weight>
+  auto Computer<edge_weight>::size() const -> Computer<edge_weight>::size_type
+  {
+    return graph->size();
+  }
 
   /**
    * Add a Vertex with the lowest unused vertexIndex.
@@ -49,19 +62,24 @@ namespace matching
   template <typename edge_weight>
   void Computer<edge_weight>::addVertex() &
   {
-    assert(graph->size() <= maxVertexIndex);
+    assert(graph->size() <= std::numeric_limits<vertex_index>::max());
+    assert(graph->size() < graph->capacity());
 
-    for (const std::unique_ptr<Vertex<edge_weight>> &vertex : *graph) {
-      vertex->edgeWeights.emplace_back();
-    }
     for (
-      RootBlossomIterator<edge_weight> iterator = graph->rootBlossomBegin();
-      iterator != graph->rootBlossomEnd();
+      auto iterator = graph->rootBlossomPool.begin();
+      iterator != graph->rootBlossomPool.end();
       ++iterator)
     {
       iterator->minOuterEdges.emplace_back();
     }
-    graph->emplace_back(new Vertex<edge_weight>(graph->size()));
+    graph->emplace_back(graph->size(), *graph);
+    for (Vertex<edge_weight> &vertex : *graph) {
+      if (&vertex != &graph->back())
+      {
+        vertex.edgeWeights.push_back(graph->aboveMaxEdgeWeight & 0u);
+      }
+      graph->back().edgeWeights.push_back(graph->aboveMaxEdgeWeight & 0u);
+    }
   }
 
   /**
@@ -77,25 +95,33 @@ namespace matching
   void Computer<edge_weight>::setEdgeWeight(
     const vertex_index modifiedVertex,
     const vertex_index neighbor,
-    const edge_weight edgeWeight) &
+    edge_weight edgeWeight) &
   {
     assert(modifiedVertex != neighbor);
     assert(modifiedVertex < graph->size());
     assert(neighbor < graph->size());
-    assert(edgeWeight << 2 >> 2 == edgeWeight);
+    assert((graph->aboveMaxEdgeWeight - 1u) >> 2 >= edgeWeight);
+    assert(edgeWeight << 2 < graph->aboveMaxEdgeWeight);
 
-    graph->maxEdgeWeight = std::max(graph->maxEdgeWeight, edgeWeight * 2u);
+    edgeWeight <<= 1;
     (*graph)[modifiedVertex]
-      ->rootBlossom
-      ->prepareVertexForWeightAdjustments(*(*graph)[modifiedVertex], *graph);
-    (*graph)[modifiedVertex]->edgeWeights[neighbor] = edgeWeight << 1;
-    (*graph)[neighbor]->edgeWeights[modifiedVertex] = edgeWeight << 1;
+      .rootBlossom
+      ->prepareVertexForWeightAdjustments((*graph)[modifiedVertex], *graph);
+    (*graph)[modifiedVertex].edgeWeights[neighbor] = edgeWeight;
+    (*graph)[neighbor].edgeWeights[modifiedVertex] = std::move(edgeWeight);
   }
 
   template <typename edge_weight>
   void Computer<edge_weight>::computeMatching() const &
   {
     graph->computeMatching();
+    for (
+      auto rootBlossomIterator = graph->rootBlossomPool.begin();
+      rootBlossomIterator != graph->rootBlossomPool.end();
+      ++rootBlossomIterator)
+    {
+      rootBlossomIterator->putVerticesInMatchingOrder();
+    }
   }
 
   /**
@@ -111,9 +137,8 @@ namespace matching
   {
     std::vector<vertex_index> result(graph->size());
     for (
-      RootBlossomIterator<edge_weight> rootBlossomIterator =
-        graph->rootBlossomBegin();
-      rootBlossomIterator != graph->rootBlossomEnd();
+      auto rootBlossomIterator = graph->rootBlossomPool.begin();
+      rootBlossomIterator != graph->rootBlossomPool.end();
       ++rootBlossomIterator)
     {
       if (rootBlossomIterator->baseVertexMatch)
@@ -133,17 +158,20 @@ namespace matching
           rootBlossomIterator->baseVertex->vertexIndex;
       }
 
-      rootBlossomIterator->useMatchingIterators();
+      assert(
+        rootBlossomIterator->baseVertex
+          == rootBlossomIterator->rootChild.vertexListHead);
+
       for (
-        BlossomMatchingIterator<edge_weight> matchingIterator =
-          rootBlossomIterator->blossomMatchingBegin();
-        matchingIterator != rootBlossomIterator->blossomMatchingEnd();
-        ++matchingIterator)
+        auto matchingIterator =
+          rootBlossomIterator->rootChild.vertexListHead->nextVertex;
+        matchingIterator;
+        matchingIterator = matchingIterator->nextVertex)
       {
         Vertex<edge_weight> &firstVertex = *matchingIterator;
 
-        ++matchingIterator;
-        assert(matchingIterator != rootBlossomIterator->blossomMatchingEnd());
+        matchingIterator = matchingIterator->nextVertex;
+        assert(matchingIterator);
         result[firstVertex.vertexIndex] = matchingIterator->vertexIndex;
         result[matchingIterator->vertexIndex] = firstVertex.vertexIndex;
 
@@ -153,5 +181,6 @@ namespace matching
     return result;
   }
 
-  MATCHINGEDGEWEIGHTPARAMETERS1(template class Computer<, >;)
+#define COMPUTER_INSTANTIATION(a) template class Computer<a>;
+    INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(COMPUTER_INSTANTIATION)
 }
