@@ -589,14 +589,24 @@ namespace fileformats
 
       /**
        * Check that the score in the TRF matches the score computed by counting
-       * the number of wins and draws for that player.
+       * the number of wins and draws for that player and (optionally) adding
+       * the acceleration. Also check that there are not more accelerated rounds
+       * than tournament rounds.
        */
-      void validateScores(const tournament::Tournament &tournament)
+      void validateScores(tournament::Tournament &tournament)
       {
-        for (const tournament::Player &player : tournament.players)
+        for (tournament::Player &player : tournament.players)
         {
           if (player.isValid)
           {
+            if (player.accelerations.size() > tournament.expectedRounds)
+            {
+              throw FileFormatException(
+                "Player "
+                  + utility::uintstringconversion::toString(player.id + 1u)
+                  + " has more acceleration entries than the total number of "
+                    "rounds in the tournament.");
+            }
             tournament::points points{ };
             tournament::round_index matchIndex{ };
             for (const tournament::Match &match : player.matches)
@@ -606,12 +616,7 @@ namespace fileformats
                 break;
               }
               points += tournament.getPoints(match.matchScore);
-              if (
-                points < tournament.getPoints(match.matchScore)
-                  || (player.accelerations.size() > matchIndex
-                        && tournament::maxPoints
-                              - player.accelerations[matchIndex]
-                            < points))
+              if (points < tournament.getPoints(match.matchScore))
               {
                 throw tournament::BuildLimitExceededException(
                   "This build only supports scores up to "
@@ -622,6 +627,12 @@ namespace fileformats
               ++matchIndex;
             }
 
+            if (
+              player.scoreWithoutAcceleration != points
+                && player.scoreWithoutAcceleration >= player.acceleration())
+            {
+              player.scoreWithoutAcceleration -= player.acceleration();
+            }
             if (player.scoreWithoutAcceleration != points)
             {
               throw FileFormatException(
