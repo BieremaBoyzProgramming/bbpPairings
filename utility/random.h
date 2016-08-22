@@ -38,8 +38,8 @@ namespace utility
     template <typename T, typename U = T, typename RandomEngine>
     U uniformUint(
       RandomEngine &randomEngine,
-      const T &min = 0,
-      const U &max = std::numeric_limits<U>::max())
+      const T min = 0,
+      const U max = std::numeric_limits<U>::max())
     {
       if (std::numeric_limits<U>::max() <= ~0ull)
       {

@@ -19,30 +19,17 @@
 #ifndef COMPUTER_H
 #define COMPUTER_H
 
-#include <algorithm>
 #include <cstdint>
-#include <initializer_list>
-#include <limits>
 #include <memory>
-#include <utility>
 #include <vector>
 
-#include <utility/typesizes.h>
 #include <utility/uinttypes.h>
 
 #include "detail/graphsig.h"
-#include "detail/rootblossomsig.h"
 #include "detail/types.h"
-#include "detail/vertexsig.h"
 
 namespace matching
 {
-  namespace detail
-  {
-    template <typename>
-    class Graph;
-  }
-
   /**
    * A class used for constructing instances of the weighted matching problem
    * and solving them. It is implemented in time O(n^3) using the basic
@@ -59,7 +46,9 @@ namespace matching
   class Computer
   {
   public:
-    Computer();
+    typedef typename detail::Graph<edge_weight_>::size_type size_type;
+
+    Computer(size_type, const edge_weight_ &);
     ~Computer() noexcept;
     Computer(Computer &) = delete;
 
@@ -70,24 +59,7 @@ namespace matching
      */
     typedef edge_weight_ edge_weight;
 
-    constexpr static vertex_index maxVertexIndex =
-      utility::typesizes::minUint(
-        std::numeric_limits<vertex_index>::max(),
-        std::numeric_limits<typename detail::Graph<edge_weight>::size_type>
-            ::max()
-          - 1u,
-        std::numeric_limits<
-          typename
-            decltype(std::declval<detail::Vertex<edge_weight>>().edgeWeights)
-              ::size_type
-        >::max() - 1u,
-        std::numeric_limits<
-          typename
-            decltype(
-              std::declval<detail::RootBlossom<edge_weight>>().minOuterEdges
-            )::size_type
-        >::max() - 1u
-      );
+    size_type size() const;
 
     void addVertex() &;
     void setEdgeWeight(vertex_index, vertex_index, edge_weight) &;

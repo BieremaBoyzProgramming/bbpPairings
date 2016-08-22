@@ -85,7 +85,7 @@ namespace utility
       typename Result,
       uinttypes::uint_least_for_value<10> radix = 10,
       typename T>
-    inline Result parse(T &iterator, const T &endIterator)
+    inline Result parse(T &iterator, const T endIterator)
     {
       if (iterator == endIterator)
       {
@@ -159,7 +159,7 @@ namespace utility
       typename T>
     inline Result parse(
       T &iterator,
-      const T &endIterator,
+      const T endIterator,
       typename std::iterator_traits<T>::difference_type precision)
     {
       Result value = parse<Result, radix>(iterator, endIterator);

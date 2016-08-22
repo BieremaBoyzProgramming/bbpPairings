@@ -105,7 +105,7 @@ namespace utility
      * std::numeric_limits<Float>::max() is returned instead.
      */
     template <typename Float, typename Uint0, typename Uint1>
-    constexpr Float divide(const Uint0 &uint0, const Uint1 &uint1)
+    constexpr Float divide(const Uint0 uint0, const Uint1 uint1)
     {
       assert(uint1);
       typedef decltype(uint0 + uint1) Uint;
@@ -175,7 +175,7 @@ namespace utility
      * Float.
      */
     template <typename Uint, typename Float>
-    constexpr Uint multiply(const Uint &uint, const Float &floatValue)
+    constexpr Uint multiply(const Uint uint, const Float floatValue)
     {
       if (float_is_bigger_than_uint<Float, Uint>::value)
       {

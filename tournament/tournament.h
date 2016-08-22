@@ -29,22 +29,31 @@
 #include <vector>
 
 #include <utility/typesizes.h>
+#include <utility/uintstringconversion.h>
 #include <utility/uinttypes.h>
 
-#ifndef MAX_PLAYERS
-  #define MAX_PLAYERS 9999
+#ifdef MAX_PLAYERS
+#define TOURNAMENT_MAX_PLAYERS MAX_PLAYERS
+#else
+#define TOURNAMENT_MAX_PLAYERS 9999
 #endif
 
-#ifndef MAX_POINTS
-  #define MAX_POINTS 1998
+#ifdef MAX_POINTS
+#define TOURNAMENT_MAX_POINTS MAX_POINTS
+#else
+#define TOURNAMENT_MAX_POINTS 1998
 #endif
 
-#ifndef MAX_RATING
-  #define MAX_RATING 9999
+#ifdef MAX_RATING
+#define TOURNAMENT_MAX_RATING MAX_RATING
+#else
+#define TOURNAMENT_MAX_RATING 9999
 #endif
 
 namespace tournament
 {
+  struct Tournament;
+
   /**
    * An exception indicating that the operation could not be completed because
    * the constants set in this file are too small.
@@ -55,15 +64,21 @@ namespace tournament
       : std::logic_error(explanation) { }
   };
 
-  typedef utility::uinttypes::uint_least_for_value<MAX_PLAYERS> player_index;
+  typedef
+    utility::uinttypes::uint_least_for_value<TOURNAMENT_MAX_PLAYERS>
+    player_index;
   /**
    * A type representing a person's score, stored as ten times the actual score.
    */
-  typedef utility::uinttypes::uint_least_for_value<MAX_POINTS> points;
-  typedef utility::uinttypes::uint_least_for_value<MAX_RATING> rating;
+  typedef
+    utility::uinttypes::uint_least_for_value<TOURNAMENT_MAX_POINTS>
+    points;
+  typedef
+    utility::uinttypes::uint_least_for_value<TOURNAMENT_MAX_RATING>
+    rating;
 
-  constexpr player_index maxPlayers = MAX_PLAYERS;
-  constexpr points maxPoints = MAX_POINTS;
+  constexpr player_index maxPlayers = TOURNAMENT_MAX_PLAYERS;
+  constexpr points maxPoints = TOURNAMENT_MAX_POINTS;
 
   enum Color : utility::uinttypes::uint_least_for_value<2>
   {
@@ -140,6 +155,8 @@ namespace tournament
      */
     std::unordered_set<player_index> forbiddenPairs;
 
+    decltype(matches)::size_type colorImbalance{ };
+
     /**
      * The zero-indexed pairing ID used for input/output.
      */
@@ -156,13 +173,9 @@ namespace tournament
     tournament::rating rating;
 
     points scoreWithoutAcceleration;
-    /**
-     * Acceleration for the current round.
-     */
-    points acceleration{ };
 
     Color colorPreference = COLOR_NONE;
-    bool absoluteColorPreference{ };
+    Color repeatedColor = COLOR_NONE;
     bool strongColorPreference{ };
 
     /**
@@ -188,9 +201,40 @@ namespace tournament
         isValid(true)
     { }
 
+    /**
+     * Return whether the difference between the number of games played as white
+     * and the number played as black leads to an absolute color preference.
+     */
+    bool absoluteColorImbalance() const
+    {
+      return colorImbalance > 1u;
+    }
+    bool absoluteColorPreference() const
+    {
+      return absoluteColorImbalance() || repeatedColor != COLOR_NONE;
+    }
+    points scoreWithAcceleration(
+      const Tournament &tournament,
+      decltype(matches)::size_type roundsBack = 0
+    ) const;
+    points acceleration() const
+    {
+      return
+        matches.size() >= accelerations.size()
+          ? 0u
+          : accelerations[matches.size()];
+    }
     points scoreWithAcceleration() const
     {
-      return scoreWithoutAcceleration + acceleration;
+      const points result = scoreWithoutAcceleration + acceleration();
+      if (result < scoreWithoutAcceleration)
+      {
+        throw BuildLimitExceededException(
+          "This build does not support accelerated scores above "
+            + utility::uintstringconversion::toString(maxPoints, 1)
+            + '.');
+      }
+      return result;
     }
   };
 
@@ -205,6 +249,18 @@ namespace tournament
     return
       std::tie(player0->scoreWithoutAcceleration, player1->rankIndex)
         < std::tie(player1->scoreWithoutAcceleration, player0->rankIndex);
+  }
+  /**
+   * Compare the players based on current accelerated score, breaking ties using
+   * the rankIndex.
+   */
+  inline bool acceleratedScoreRankCompare(
+    const Player *const player0,
+    const Player *const player1)
+  {
+    return
+      std::make_tuple(player0->scoreWithAcceleration(), player1->rankIndex)
+        < std::make_tuple(player1->scoreWithAcceleration(), player0->rankIndex);
   }
 
   typedef
@@ -244,8 +300,8 @@ namespace tournament
     std::deque<player_index> playersByRank;
     round_index playedRounds{ };
     round_index expectedRounds{ };
-    points pointsForWin = 10;
-    points pointsForDraw = 5;
+    points pointsForWin{ 10u };
+    points pointsForDraw{ 5u };
     Color initialColor = COLOR_NONE;
 
     points getPoints(const MatchScore matchScore) const &
@@ -261,6 +317,38 @@ namespace tournament
     void updateRanks() &;
     void computePlayerData() &;
   };
+
+  /**
+   * The score of the specified player including acceleration, on the round that
+   * is roundsBack before the current round.
+   */
+  inline points Player::scoreWithAcceleration(
+    const Tournament &tournament,
+    decltype(matches)::size_type roundsBack
+  ) const
+  {
+    points score = this->scoreWithoutAcceleration;
+    round_index roundIndex = tournament.playedRounds;
+    while (roundsBack > 0u)
+    {
+      --roundIndex;
+      score -= tournament.getPoints(matches[roundIndex].matchScore);
+      --roundsBack;
+    }
+
+    const points result =
+      score
+        + (roundIndex >= accelerations.size() ? 0u : accelerations[roundIndex]);
+    if (result < score)
+    {
+      throw BuildLimitExceededException(
+        "This build does not support accelerated scores above "
+          + utility::uintstringconversion::toString(maxPoints, 1)
+          + '.');
+    }
+    return result;
+  }
+
 
   static_assert(
     maxPlayers

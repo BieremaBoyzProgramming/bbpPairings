@@ -91,7 +91,7 @@ namespace utility
      */
     template <typename T, typename U>
     constexpr typename smallest<T, U>::type
-      minUint(const T &t, const U &u)
+      minUint(const T t, const U u)
     {
       if (make_unsigned_if_signed<T>(t) < make_unsigned_if_signed<U>(u))
       {
@@ -109,7 +109,7 @@ namespace utility
      */
     template <typename T, typename U, typename ...Targs>
     constexpr typename smallest<T, U, Targs...>::type
-      minUint(const T &t, const U &u, Targs... targs)
+      minUint(const T t, const U u, Targs... targs)
     {
       return minUint(minUint(t, u), targs...);
     }

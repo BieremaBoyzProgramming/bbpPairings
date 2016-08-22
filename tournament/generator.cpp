@@ -37,6 +37,7 @@
 #include "generator.h"
 #include "tournament.h"
 
+#ifndef OMIT_GENERATOR
 namespace tournament
 {
   namespace generator
@@ -119,22 +120,6 @@ namespace tournament
       : tournament(std::move(tournament_)),
         roundsNumber(tournament_.playedRounds)
     {
-      if (tournament.playersByRank.size() > maxPlayers)
-      {
-        throw BuildLimitExceededException(
-          "This build supports at most "
-            + utility::uintstringconversion::toString(maxPlayers)
-            + " players.");
-      }
-      else if (tournament.playedRounds > maxRounds)
-      {
-        throw BuildLimitExceededException(
-          "This build supports at most "
-            + utility::uintstringconversion
-                ::toString(maxRounds)
-            + " rounds.");
-      }
-
       player_index retiredPlayers{ };
       player_index halfPointByePlayers{ };
       game_index forfeitGames{ };
@@ -153,10 +138,30 @@ namespace tournament
         round_index matchIndex{ };
         for (const Match &match : player.matches)
         {
-          if (matchIndex >= tournament.playedRounds)
+          if (match.participatedInPairing && match.opponent != player.id)
           {
-            break;
+            ++scheduledGames;
+            if (!scheduledGames)
+            {
+              assert(
+                tournament.playedRounds > maxRounds
+                  || tournament.players.size() > maxPlayers);
+              throw BuildLimitExceededException(
+                "This build supports at most "
+                  + (tournament.playedRounds > maxRounds
+                      ? utility::uintstringconversion::toString(maxRounds)
+                          + " rounds."
+                      : utility::uintstringconversion::toString(maxPlayers)
+                          + " players."));
+            }
+
+            if (!match.gameWasPlayed)
+            {
+              ++forfeitGames;
+              assert(forfeitGames);
+            }
           }
+
           if (match.gameWasPlayed)
           {
             ++playedGames;
@@ -166,18 +171,6 @@ namespace tournament
             {
               ++drawnGames;
               assert(drawnGames);
-            }
-          }
-
-          if (match.participatedInPairing && match.opponent != player.id)
-          {
-            ++scheduledGames;
-            assert(scheduledGames);
-
-            if (!match.gameWasPlayed)
-            {
-              ++forfeitGames;
-              assert(forfeitGames);
             }
           }
 
@@ -276,20 +269,6 @@ namespace tournament
       std::ostream *checklistStream)
     {
       result = std::move(configuration.tournament);
-      if (result.playersByRank.size() > maxPlayers)
-      {
-        throw BuildLimitExceededException(
-          "This build supports at most "
-            + utility::uintstringconversion::toString(maxPlayers)
-            + " players.");
-      }
-      else if (result.playedRounds > maxRounds)
-      {
-        throw BuildLimitExceededException(
-          "This build supports at most "
-            + utility::uintstringconversion::toString(maxRounds)
-            + " rounds.");
-      }
 
       result.initialColor =
         std::uniform_int_distribution<unsigned char>(false, true)(randomEngine)
@@ -308,9 +287,7 @@ namespace tournament
        */
       std::vector<round_index> halfPointByeCounts(
         result.playersByRank.size());
-      if (
-        zeroPointByeCounts.size()
-          < result.playersByRank.size())
+      if (zeroPointByeCounts.size() < result.playersByRank.size())
       {
         throw std::length_error("");
       }
@@ -344,6 +321,22 @@ namespace tournament
       game_index eligibleGames =
         game_index{ initialRemainingCount }
           * result.playersByRank.size();
+      if (
+        initialRemainingCount
+          && eligibleGames / initialRemainingCount < result.playersByRank.size()
+      )
+      {
+        assert(
+          initialRemainingCount > maxRounds
+            || result.players.size() > maxPlayers);
+        throw BuildLimitExceededException(
+          "This build supports at most "
+            + (initialRemainingCount > maxRounds
+                ? utility::uintstringconversion::toString(maxRounds)
+                    + " rounds."
+                : utility::uintstringconversion::toString(maxPlayers)
+                    + " players."));
+      }
       /**
        * Until enough people have received a zero-point bye,
        */
@@ -383,6 +376,19 @@ namespace tournament
           ++playerEligibleGames;
         }
         eligibleGames += result.playersByRank.size();
+        if (eligibleGames < result.playersByRank.size())
+        {
+          assert(
+            initialRemainingCount >= maxRounds
+              || result.players.size() > maxPlayers);
+          throw BuildLimitExceededException(
+            "This build supports at most "
+              + (initialRemainingCount >= maxRounds
+                  ? utility::uintstringconversion::toString(maxRounds)
+                      + " rounds."
+                  : utility::uintstringconversion::toString(maxPlayers)
+                      + " players."));
+        }
       }
       remainingPlayers =
         applyRate(
@@ -513,6 +519,14 @@ namespace tournament
         // Generate the game results.
         for (const swisssystems::Pairing &pair : matching)
         {
+          assert(
+            result.players[pair.white].isValid
+              && result.players[pair.white].matches.size()
+                  <= result.playedRounds);
+          assert(
+            result.players[pair.black].isValid
+              && result.players[pair.black].matches.size()
+                  <= result.playedRounds);
           if (pair.white == pair.black)
           {
             result.players[pair.white].matches.emplace_back(
@@ -599,8 +613,7 @@ namespace tournament
           Player &player = result.players[playerIndex];
 
           const points newPoints =
-            result
-              .getPoints(player.matches.back().matchScore);
+            result.getPoints(player.matches.back().matchScore);
           player.scoreWithoutAcceleration += newPoints;
           if (player.scoreWithoutAcceleration < newPoints)
           {
@@ -623,3 +636,4 @@ namespace tournament
       std::ostream *);
   }
 }
+#endif

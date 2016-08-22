@@ -89,12 +89,12 @@ namespace utility
     public:
       constexpr uint() { }
       template <std::size_t pieces_>
-      constexpr uint(const uint<pieces_> &value)
+      constexpr uint(const uint<pieces_> value)
         : uint<pieces>(value, detail::pieces_compare<pieces, pieces_>{ }) { }
       template <
         typename T,
         typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-      constexpr uint(const T &value)
+      constexpr uint(const T value)
         : uint<pieces>(
             value,
             typename
@@ -441,7 +441,7 @@ namespace utility
     public:
       constexpr uint() { }
       template <typename T>
-      constexpr uint(const T &value) : highPiece(value) {
+      constexpr uint(const T value) : highPiece(value) {
         assert(
           !std::is_floating_point<T>::value || std::isfinite((long double)value)
         );
@@ -650,7 +650,7 @@ namespace utility
           : uint0 == uint<pieces0>{ uint1 };
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator==(const T &value0, const uint<pieces> value1)
+    constexpr bool operator==(const T value0, const uint<pieces> value1)
     {
       return
         std::is_floating_point<T>::value
@@ -658,7 +658,7 @@ namespace utility
           : uint<pieces>{ value0 } < value1;
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator==(const uint<pieces> value0, const T &value1)
+    constexpr bool operator==(const uint<pieces> value0, const T value1)
     {
       return
         std::is_floating_point<T>::value
@@ -676,7 +676,7 @@ namespace utility
           : uint0 < uint<pieces0>{ uint1 };
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator<(const T &value0, const uint<pieces> value1)
+    constexpr bool operator<(const T value0, const uint<pieces> value1)
     {
       return
         std::is_floating_point<T>::value
@@ -702,7 +702,7 @@ namespace utility
           : uint0 > uint<pieces0>{ uint1 };
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator>(const T &value0, const uint<pieces> value1)
+    constexpr bool operator>(const T value0, const uint<pieces> value1)
     {
       return
         std::is_floating_point<T>::value
@@ -710,7 +710,7 @@ namespace utility
           : uint<pieces>{ value0 } > value1;
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator>(const uint<pieces> value0, const T &value1)
+    constexpr bool operator>(const uint<pieces> value0, const T value1)
     {
       return
         std::is_floating_point<T>::value
@@ -728,7 +728,7 @@ namespace utility
           : uint0 != uint<pieces0>{ uint1 };
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator!=(const T &value0, const uint<pieces> value1)
+    constexpr bool operator!=(const T value0, const uint<pieces> value1)
     {
       return
         std::is_floating_point<T>::value
@@ -736,7 +736,7 @@ namespace utility
           : uint<pieces>{ value0 } != value1;
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator!=(const uint<pieces> value0, const T &value1)
+    constexpr bool operator!=(const uint<pieces> value0, const T value1)
     {
       return
         std::is_floating_point<T>::value
@@ -754,7 +754,7 @@ namespace utility
           : uint0 <= uint<pieces0>{ uint1 };
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator<=(const T &value0, const uint<pieces> value1)
+    constexpr bool operator<=(const T value0, const uint<pieces> value1)
     {
       return
         std::is_floating_point<T>::value
@@ -762,7 +762,7 @@ namespace utility
           : uint<pieces>{ value0 } <= value1;
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator<=(const uint<pieces> value0, const T &value1)
+    constexpr bool operator<=(const uint<pieces> value0, const T value1)
     {
       return
         std::is_floating_point<T>::value
@@ -780,7 +780,7 @@ namespace utility
           : uint0 >= uint<pieces0>{ uint1 };
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator>=(const T &value0, const uint<pieces> value1)
+    constexpr bool operator>=(const T value0, const uint<pieces> value1)
     {
       return
         std::is_floating_point<T>::value
@@ -788,7 +788,7 @@ namespace utility
           : uint<pieces>{ value0 } >= value1;
     }
     template <std::size_t pieces, typename T>
-    constexpr bool operator>=(const uint<pieces> value0, const T &value1)
+    constexpr bool operator>=(const uint<pieces> value0, const T value1)
     {
       return
         std::is_floating_point<T>::value
@@ -809,13 +809,13 @@ namespace utility
       }
     }
     template <std::size_t pieces, typename T>
-    constexpr uint<pieces> operator&(const T &value0, const uint<pieces> value1)
+    constexpr uint<pieces> operator&(const T value0, const uint<pieces> value1)
     {
       static_assert(!std::is_floating_point<T>::value, "Undefined.");
       return uint<pieces>{ value0 } & value1;
     }
     template <std::size_t pieces, typename T>
-    constexpr uint<pieces> operator&(const uint<pieces> value0, const T &value1)
+    constexpr uint<pieces> operator&(const uint<pieces> value0, const T value1)
     {
       static_assert(!std::is_floating_point<T>::value, "Undefined.");
       return value0 & uint<pieces>{ value1 };
@@ -834,14 +834,14 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr uint<pieces>
-      operator|(const T &value0, const uint<pieces> value1)
+      operator|(const T value0, const uint<pieces> value1)
     {
       static_assert(!std::is_floating_point<T>::value, "Undefined.");
       return uint<pieces>{ value0 } | value1;
     }
     template <std::size_t pieces, typename T>
     constexpr uint<pieces>
-      operator|(const uint<pieces> value0, const T &value1)
+      operator|(const uint<pieces> value0, const T value1)
     {
       static_assert(!std::is_floating_point<T>::value, "Undefined.");
       return value0 | uint<pieces>{ value1 };
@@ -861,7 +861,7 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>
-      operator+(const T &value0, const uint<pieces> value1)
+      operator+(const T value0, const uint<pieces> value1)
     {
       if (std::is_floating_point<T>::value)
       {
@@ -874,7 +874,7 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>
-      operator+(const uint<pieces> value0, const T &value1)
+      operator+(const uint<pieces> value0, const T value1)
     {
       if (std::is_floating_point<T>::value)
       {
@@ -900,7 +900,7 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>
-      operator-(const T &value0, const uint<pieces> value1)
+      operator-(const T value0, const uint<pieces> value1)
     {
       if (std::is_floating_point<T>::value)
       {
@@ -913,7 +913,7 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>
-      operator-(const uint<pieces> value0, const T &value1)
+      operator-(const uint<pieces> value0, const T value1)
     {
       if (std::is_floating_point<T>::value)
       {
@@ -949,7 +949,7 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>
-      operator*(const T &value0, const uint<pieces> value1)
+      operator*(const T value0, const uint<pieces> value1)
     {
       if (std::is_floating_point<T>::value)
       {
@@ -991,7 +991,7 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>
-      operator/(const T &value0, const uint<pieces> value1)
+      operator/(const T value0, const uint<pieces> value1)
     {
       if (std::is_floating_point<T>::value)
       {
@@ -1004,7 +1004,7 @@ namespace utility
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>
-      operator/(const uint<pieces> value0, const T &value1)
+      operator/(const uint<pieces> value0, const T value1)
     {
       if (std::is_floating_point<T>::value)
       {

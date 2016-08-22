@@ -22,6 +22,7 @@
 #include <limits>
 #include <list>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -35,6 +36,7 @@
 #include "burstein.h"
 #include "common.h"
 
+#ifndef OMIT_BURSTEIN
 namespace swisssystems
 {
   namespace burstein
@@ -55,11 +57,10 @@ namespace swisssystems
 
         for (tournament::Player &player : tournament.players)
         {
-          player.acceleration =
+          player.accelerations.push_back(
             player.isValid && player.rankIndex < rankBound >> 1
               ? tournament.pointsForWin
-              : 0;
-          player.accelerations.push_back(player.acceleration);
+              : 0);
         }
       }
     }
@@ -115,28 +116,118 @@ namespace swisssystems
         {
           return 0;
         }
-        tournament::points scoreSoFar = player.acceleration;
         points_product result{ };
-        adjusted_score futureVirtualPoints =
-          adjusted_score{ tournament.playedRounds } * tournament.pointsForDraw;
+        const adjusted_score futureVirtualPoints =
+          adjusted_score(tournament.playedRounds - 1u)
+            * tournament.pointsForDraw;
+        adjusted_score virtualPoints =
+          futureVirtualPoints + player.acceleration();
+        if (
+          virtualPoints < futureVirtualPoints
+            || (tournament.playedRounds > 1u
+                  && futureVirtualPoints / (tournament.playedRounds - 1u)
+                      < tournament.pointsForDraw))
+        {
+          assert(
+            tournament.playedRounds > tournament::maxRounds
+              || tournament.pointsForDraw > tournament::maxPoints);
+          throw tournament::BuildLimitExceededException(
+            "This build supports at most "
+              + (tournament.playedRounds > tournament::maxRounds
+                  ? utility::uintstringconversion
+                        ::toString(tournament::maxRounds)
+                      + " rounds."
+                  : utility::uintstringconversion
+                        ::toString(tournament::maxPoints, 1)
+                      + " points per draw."));
+        }
+
+        tournament::round_index roundIndex{ };
         for (const tournament::Match &match : player.matches)
         {
-          futureVirtualPoints -= tournament.pointsForDraw;
+          if (roundIndex >= tournament.playedRounds)
+          {
+            break;
+          }
           if (match.gameWasPlayed)
           {
-            result +=
+            const points_product addend =
               points_product{ adjustedScores[match.opponent] }
                 * tournament.getPoints(match.matchScore);
+            result += addend;
+            if (
+              result < addend
+                || (adjustedScores[match.opponent]
+                      && addend / adjustedScores[match.opponent]
+                          < tournament.getPoints(match.matchScore)))
+            {
+              assert(
+                tournament.playedRounds > tournament::maxRounds
+                  || tournament.pointsForWin > tournament::maxPoints
+                  || tournament.pointsForDraw > tournament::maxPoints);
+              throw tournament::BuildLimitExceededException(
+                "This build supports at most "
+                  + (tournament.playedRounds > tournament::maxRounds
+                      ? utility::uintstringconversion
+                            ::toString(tournament::maxRounds)
+                          + " rounds."
+                      : utility::uintstringconversion
+                            ::toString(tournament::maxPoints, 1)
+                          + "points per match."));
+            }
           }
           else
           {
-            result +=
-              tournament.getPoints(match.matchScore)
-                * (points_product{ scoreSoFar }
-                    + tournament.getPoints(tournament::invert(match.matchScore))
-                    + futureVirtualPoints);
+            const adjusted_score virtualScore =
+              virtualPoints
+                + tournament.getPoints(tournament::invert(match.matchScore));
+            const points_product scaledScore =
+              points_product{ tournament.getPoints(match.matchScore) }
+                * virtualScore;
+            result += scaledScore;
+            if (
+              result < scaledScore
+                || virtualScore < virtualPoints
+                || (virtualScore
+                      && scaledScore / virtualScore
+                          < tournament.getPoints(match.matchScore)))
+            {
+              assert(
+                tournament.playedRounds > tournament::maxRounds
+                  || tournament.pointsForWin > tournament::maxPoints
+                  || tournament.pointsForDraw > tournament::maxPoints);
+              throw tournament::BuildLimitExceededException(
+                "This build supports at most "
+                  + (tournament.playedRounds > tournament::maxRounds
+                      ? utility::uintstringconversion
+                            ::toString(tournament::maxRounds)
+                          + " rounds."
+                      : utility::uintstringconversion
+                            ::toString(tournament::maxPoints, 1)
+                          + " points per match."));
+            }
           }
-          scoreSoFar += tournament.getPoints(match.matchScore);
+          virtualPoints += tournament.getPoints(match.matchScore);
+          if (
+            virtualPoints < tournament.getPoints(match.matchScore)
+              && virtualPoints >= tournament.pointsForDraw)
+          {
+            assert(
+              tournament.playedRounds > tournament::maxRounds
+                || tournament.pointsForWin > tournament::maxPoints
+                || tournament.pointsForDraw > tournament::maxPoints);
+            throw tournament::BuildLimitExceededException(
+              "This build supports at most "
+                + (tournament.playedRounds > tournament::maxRounds
+                    ? utility::uintstringconversion
+                          ::toString(tournament::maxRounds)
+                        + " rounds."
+                    : utility::uintstringconversion
+                          ::toString(tournament::maxPoints, 1)
+                        + "points per match."));
+          }
+          virtualPoints -= tournament.pointsForDraw;
+          ++roundIndex;
         }
         return result;
       }
@@ -151,16 +242,43 @@ namespace swisssystems
         {
           return 0;
         }
-        tournament::points scoreSoFar = player.acceleration;
         points_product result{ };
-        adjusted_score futureVirtualPoints =
-          adjusted_score{ tournament.playedRounds } * tournament.pointsForDraw;
+        const adjusted_score futureVirtualPoints =
+          adjusted_score(tournament.playedRounds - 1u)
+            * tournament.pointsForDraw;
+        adjusted_score virtualPoints =
+          futureVirtualPoints + player.acceleration();
+        if (
+          virtualPoints < futureVirtualPoints
+            || (tournament.playedRounds > 1u
+                  && futureVirtualPoints / (tournament.playedRounds - 1u)
+                      < tournament.pointsForDraw))
+        {
+          assert(
+            tournament.playedRounds > tournament::maxRounds
+              || tournament.pointsForDraw > tournament::maxPoints);
+          throw tournament::BuildLimitExceededException(
+            "This build supports at most "
+              + (tournament.playedRounds > tournament::maxRounds
+                  ? utility::uintstringconversion
+                        ::toString(tournament::maxRounds)
+                      + " rounds."
+                  : utility::uintstringconversion
+                        ::toString(tournament::maxPoints, 1)
+                      + " points per draw."));
+        }
+
         adjusted_score min =
           std::numeric_limits<adjusted_score>::max();
         adjusted_score max{ };
+
+        tournament::round_index roundIndex{ };
         for (const tournament::Match &match : player.matches)
         {
-          futureVirtualPoints -= tournament.pointsForDraw;
+          if (roundIndex >= tournament.playedRounds)
+          {
+            break;
+          }
           adjusted_score adjustment;
           if (match.gameWasPlayed)
           {
@@ -168,15 +286,67 @@ namespace swisssystems
           }
           else
           {
-            adjustment = scoreSoFar;
-            adjustment +=
-              tournament.getPoints(tournament::invert(match.matchScore));
-            adjustment += futureVirtualPoints;
+            adjustment =
+              virtualPoints
+                + tournament.getPoints(tournament::invert(match.matchScore));
+            if (adjustment < virtualPoints)
+            {
+              assert(
+                tournament.playedRounds > tournament::maxRounds
+                  || tournament.pointsForWin > tournament::maxPoints
+                  || tournament.pointsForDraw > tournament::maxPoints);
+              throw tournament::BuildLimitExceededException(
+                "This build supports at most "
+                  + (tournament.playedRounds > tournament::maxRounds
+                      ? utility::uintstringconversion
+                            ::toString(tournament::maxRounds)
+                          + " rounds."
+                      : utility::uintstringconversion
+                            ::toString(tournament::maxPoints, 1)
+                          + " points per match."));
+            }
           }
           result += adjustment;
+          if (result < adjustment)
+          {
+            assert(
+              tournament.playedRounds > tournament::maxRounds
+                || tournament.pointsForWin > tournament::maxPoints
+                || tournament.pointsForDraw > tournament::maxPoints);
+            throw tournament::BuildLimitExceededException(
+              "This build supports at most "
+                + (tournament.playedRounds > tournament::maxRounds
+                    ? utility::uintstringconversion
+                          ::toString(tournament::maxRounds)
+                        + " rounds."
+                    : utility::uintstringconversion
+                          ::toString(tournament::maxPoints, 1)
+                        + " points per match."));
+          }
           min = std::min(min, adjustment);
           max = std::max(max, adjustment);
-          scoreSoFar += tournament.getPoints(match.matchScore);
+
+          virtualPoints += tournament.getPoints(match.matchScore);
+          if (
+            virtualPoints < tournament.getPoints(match.matchScore)
+              && virtualPoints >= tournament.pointsForDraw)
+          {
+            assert(
+              tournament.playedRounds > tournament::maxRounds
+                || tournament.pointsForWin > tournament::maxPoints
+                || tournament.pointsForDraw > tournament::maxPoints);
+            throw tournament::BuildLimitExceededException(
+              "This build supports at most "
+                + (tournament.playedRounds > tournament::maxRounds
+                    ? utility::uintstringconversion
+                          ::toString(tournament::maxRounds)
+                        + " rounds."
+                    : utility::uintstringconversion
+                          ::toString(tournament::maxPoints, 1)
+                        + "points per match."));
+          }
+          virtualPoints -= tournament.pointsForDraw;
+          ++roundIndex;
         }
         if (median)
         {
@@ -213,7 +383,33 @@ namespace swisssystems
               )
             ),
             rankIndex(player.rankIndex)
-          { }
+        {
+          if (
+            playerScore
+              && (buchholzScore() / playerScore < buchholzTiebreak
+                    || medianScore() / playerScore < medianTiebreak))
+          {
+            assert(
+              tournament.playedRounds > tournament::maxRounds
+                || tournament.pointsForWin > tournament::maxPoints
+                || tournament.pointsForDraw > tournament::maxPoints
+                || playerScore > tournament::maxPoints);
+            throw tournament::BuildLimitExceededException(
+              playerScore > tournament::maxPoints
+                ? "This build does not support scores above "
+                    + utility::uintstringconversion
+                        ::toString(tournament::maxPoints, 1)
+                    + '.'
+                : "This build supports at most "
+                    + (tournament.playedRounds > tournament::maxRounds
+                        ? utility::uintstringconversion
+                              ::toString(tournament::maxRounds)
+                            + " rounds."
+                        : utility::uintstringconversion
+                              ::toString(tournament::maxPoints, 1)
+                            + " points per match."));
+          }
+        }
 
         /**
          * Compare two players in the same scoregroup (including a floater from
@@ -278,8 +474,8 @@ namespace swisssystems
       {
         return
           player0.forbiddenPairs.count(player1.id)
-              || (player0.absoluteColorPreference
-                    && player1.absoluteColorPreference
+              || (player0.absoluteColorPreference()
+                    && player1.absoluteColorPreference()
                     && player0.colorPreference == player1.colorPreference)
             ? 0
             : compatibleMultiplier
@@ -359,72 +555,22 @@ namespace swisssystems
         const tournament::Tournament &tournament,
         const std::vector<MetricScores> &metricScores)
       {
-        if (
-          colorPreferencesAreCompatible(
-            player.colorPreference,
-            opponent.colorPreference))
-        {
-          if (player.colorPreference != tournament::COLOR_NONE)
-          {
-            return player.colorPreference;
-          }
-          else if (opponent.colorPreference != tournament::COLOR_NONE)
-          {
-            return invert(opponent.colorPreference);
-          }
-          else
-          {
-            return
-              player.rankIndex < opponent.rankIndex
-                ? player.rankIndex & 1u
-                    ? invert(tournament.initialColor)
-                    : tournament.initialColor
-                : opponent.rankIndex & 1u
-                    ? tournament.initialColor
-                    : invert(tournament.initialColor);
-          }
-        }
-        else if (player.absoluteColorPreference)
-        {
-          return player.colorPreference;
-        }
-        else if (opponent.absoluteColorPreference)
-        {
-          return invert(opponent.colorPreference);
-        }
-        else if (
-          player.strongColorPreference && !opponent.strongColorPreference)
-        {
-          return player.colorPreference;
-        }
-        else if (
-          opponent.strongColorPreference && !player.strongColorPreference)
-        {
-          return invert(opponent.colorPreference);
-        }
-        else
-        {
-          tournament::Color playerColor;
-          tournament::Color opponentColor;
-          findFirstColorDifference(
-            player,
-            opponent,
-            playerColor,
-            opponentColor);
-          if (
-            playerColor != tournament::COLOR_NONE
-              && opponentColor != tournament::COLOR_NONE)
-          {
-            return opponentColor;
-          }
-          else
-          {
-            return
-              metricScores[player.id] < metricScores[opponent.id]
-                ? invert(opponent.colorPreference)
-                : player.colorPreference;
-          }
-        }
+        const tournament::Color result =
+          choosePlayerNeutralColor(player, opponent);
+        return
+          result == tournament::COLOR_NONE
+            ? player.colorPreference == tournament::COLOR_NONE
+                ? player.rankIndex < opponent.rankIndex
+                    ? player.rankIndex & 1u
+                        ? invert(tournament.initialColor)
+                        : tournament.initialColor
+                    : opponent.rankIndex & 1u
+                        ? tournament.initialColor
+                        : invert(tournament.initialColor)
+                : metricScores[player.id] < metricScores[opponent.id]
+                    ? invert(opponent.colorPreference)
+                    : player.colorPreference
+            : result;
       }
 
       void printChecklist(
@@ -432,23 +578,9 @@ namespace swisssystems
         const std::list<const tournament::Player *> &sortedPlayers,
         std::ostream &ostream,
         std::vector<MetricScores> &metricScores,
-        const std::vector<const tournament::Player *> *const vertexLabels =
-          nullptr,
         const tournament::Player *const bye = nullptr,
-        const std::vector<tournament::player_index> *const matching = nullptr)
+        const std::vector<const tournament::Player *> *const matching = nullptr)
       {
-        std::vector<const tournament::Player *>
-          matchingById(tournament.players.size());
-        tournament::player_index vertexIndex{ };
-        for (const tournament::Player *player : sortedPlayers)
-        {
-          if (matching && vertexLabels && player != bye)
-          {
-            matchingById[player->id] =
-              (*vertexLabels)[(*matching)[vertexIndex++]];
-          }
-        }
-
         swisssystems::printChecklist(
           ostream,
           std::deque<std::string>{
@@ -459,11 +591,12 @@ namespace swisssystems
             "Median tiebreak",
             "Cur"
           },
-          [&metricScores, &matchingById, bye, &tournament]
+          [&metricScores, &matching, bye, &tournament]
             (const tournament::Player &player)
           {
             const MetricScores &metricScore = metricScores[player.id];
-            const tournament::Player *opponent = matchingById[player.id];
+            const tournament::Player *opponent =
+              matching ? (*matching)[player.id] : nullptr;
             return std::deque<std::string>{
               utility::uintstringconversion
                 ::toString(metricScore.sonnebornBerger, 2),
@@ -498,8 +631,8 @@ namespace swisssystems
     }
 
     /**
-     * Return a list of the pairings (in standard order) produced by running the
-     * Burstein algorithm. This runs in theoretical time O(n^3 + nr) for n
+     * Return a list of the pairings (in arbitrary order) produced by running
+     * the Burstein algorithm. This runs in theoretical time O(n^3 + nr) for n
      * players and r previous rounds. If ostream is nonnull, output a checklist
      * file.
      *
@@ -522,7 +655,7 @@ namespace swisssystems
           {
             sortedPlayers.push_back(&player);
           }
-          adjustedScore = player.acceleration;
+          adjustedScore = player.acceleration();
           tournament::round_index matchIndex{ };
           for (const tournament::Match &match : player.matches)
           {
@@ -538,6 +671,17 @@ namespace swisssystems
         }
         adjustedScores.push_back(adjustedScore);
       }
+
+      if (
+        sortedPlayers.size() - (sortedPlayers.size() & 1u)
+          > tournament::maxPlayers)
+      {
+        throw tournament::BuildLimitExceededException(
+          "This build supports at most "
+            + utility::uintstringconversion::toString(tournament::maxPlayers)
+            + " players.");
+      }
+
       std::vector<MetricScores> metricScores;
       for (const tournament::Player &player : tournament.players)
       {
@@ -568,20 +712,14 @@ namespace swisssystems
       {
         std::list<const tournament::Player *>::iterator playerIterator =
           sortedPlayers.end();
-        bool unplayedPoints;
+        bool eligibleForBye;
         do
         {
           --playerIterator;
-          unplayedPoints = false;
-          for (const tournament::Match &match : (*playerIterator)->matches)
-          {
-            if (!match.gameWasPlayed && tournament.getPoints(match.matchScore))
-            {
-              unplayedPoints = true;
-            }
-          }
-        } while (playerIterator != sortedPlayers.begin() && unplayedPoints);
-        if (unplayedPoints)
+          eligibleForBye =
+            swisssystems::eligibleForBye(**playerIterator, tournament);
+        } while (playerIterator != sortedPlayers.begin() && !eligibleForBye);
+        if (!eligibleForBye)
         {
           if (ostream)
           {
@@ -614,7 +752,11 @@ namespace swisssystems
         --byeIterator;
       }
 
-      matching_computer matchingComputer;
+      matching_computer matchingComputer(vertexLabels.size(), maxEdgeWeight);
+      if (vertexLabels.size() > ~matching_computer::size_type{ })
+      {
+        throw std::length_error("");
+      }
 
       // Add the vertices to the matching computer.
       for (
@@ -738,7 +880,6 @@ namespace swisssystems
             sortedPlayers,
             *ostream,
             metricScores,
-            &vertexLabels,
             bye);
         }
         throw NoValidPairingException(
@@ -749,7 +890,8 @@ namespace swisssystems
       // Optimize the matching so that players at the top of their scoregroup
       // play those at the bottom.
 
-      std::vector<bool> matchedVertices(vertexLabels.size());
+      std::vector<const tournament::Player *>
+        matchingById(tournament.players.size());
       std::deque<tournament::player_index>::iterator scoreGroupIterator =
         scoreGroups.begin();
       tournament::player_index scoreGroupBegin = *scoreGroupIterator;
@@ -817,7 +959,7 @@ namespace swisssystems
           vertexIterator != fullScoreGroup.end();
           ++vertexIterator)
         {
-          if (!matchedVertices[*vertexIterator])
+          if (!matchingById[vertexLabels[*vertexIterator]->id])
           {
             matching_computer::edge_weight neighborPriority = 1;
             for (
@@ -826,7 +968,7 @@ namespace swisssystems
               neighborIterator != fullScoreGroup.end();
               ++neighborIterator)
             {
-              if (!matchedVertices[*neighborIterator])
+              if (!matchingById[vertexLabels[*neighborIterator]->id])
               {
                 matching_computer::edge_weight edgeWeight =
                   computeEdgeWeight(
@@ -854,38 +996,26 @@ namespace swisssystems
             else
             {
               // Finalize the match so the two players will not be reassigned.
-              matchedVertices[*vertexIterator] = true;
-              matchedVertices[match] = true;
-              for (
-                tournament::player_index playerIndex{ };
-                playerIndex < vertexLabels.size();
-                ++playerIndex)
-              {
-                if (*vertexIterator != playerIndex)
-                {
-                  matchingComputer.setEdgeWeight(
-                    *vertexIterator,
-                    playerIndex,
-                    playerIndex == match);
-                }
-                if (match != playerIndex)
-                {
-                  matchingComputer.setEdgeWeight(
-                    match,
-                    playerIndex,
-                    playerIndex == *vertexIterator);
-                }
-              }
+              matchingById[vertexLabels[*vertexIterator]->id] =
+                vertexLabels[match];
+              matchingById[vertexLabels[match]->id] =
+                vertexLabels[*vertexIterator];
+              result.emplace_back(
+                vertexLabels[*vertexIterator]->id,
+                vertexLabels[match]->id,
+                choosePlayerColor(
+                  *vertexLabels[*vertexIterator],
+                  *vertexLabels[match],
+                  tournament,
+                  metricScores));
+
+              finalizePair(*vertexIterator, match, matchingComputer);
             }
           }
         }
 
         scoreGroupBegin = *scoreGroupIterator;
       }
-
-      matchingComputer.computeMatching();
-      std::vector<matching_computer::vertex_index> matching =
-        matchingComputer.getMatching();
 
       if (ostream)
       {
@@ -894,30 +1024,11 @@ namespace swisssystems
           sortedPlayers,
           *ostream,
           metricScores,
-          &vertexLabels,
           bye,
-          &matching);
+          &matchingById);
       }
-
-      // Generate the return list.
-      tournament::player_index vertexIndex{ };
-      for (const tournament::Player *const player : vertexLabels)
-      {
-        if (matching[vertexIndex] > vertexIndex)
-        {
-          const tournament::Player &opponent =
-            *vertexLabels[matching[vertexIndex]];
-
-          result.emplace_back(
-            player->id,
-            vertexLabels[matching[vertexIndex]]->id,
-            choosePlayerColor(*player, opponent, tournament, metricScores));
-        }
-        ++vertexIndex;
-      }
-
-      sortResults(result, tournament);
       return result;
     }
   }
 }
+#endif

@@ -35,6 +35,7 @@
 
 #include "burstein.h"
 #include "common.h"
+#include "dutch.h"
 
 namespace swisssystems
 {
@@ -118,7 +119,7 @@ namespace swisssystems
         utility::uintstringconversion
           ::toString(player.scoreWithAcceleration(), 1),
         colorString,
-        player.absoluteColorPreference ? preferenceIsWhite ? "W " : "B "
+        player.absoluteColorPreference() ? preferenceIsWhite ? "W " : "B "
           : player.strongColorPreference ? preferenceIsWhite ? "(W)" : "(B)"
           : player.colorPreference == tournament::COLOR_NONE ? "A "
           : preferenceIsWhite ? "w " : "b "
@@ -259,6 +260,81 @@ namespace swisssystems
   }
 
   /**
+   * A function to compute the color given to the first argument, whose
+   * opponent is the second argument. If the players have the same color
+   * preference (or no color preference), even going back to the last round they
+   * both played, return COLOR_NONE.
+   */
+  tournament::Color choosePlayerNeutralColor(
+    const tournament::Player &player,
+    const tournament::Player &opponent)
+  {
+    if (
+      colorPreferencesAreCompatible(
+        player.colorPreference,
+        opponent.colorPreference))
+    {
+      if (player.colorPreference != tournament::COLOR_NONE)
+      {
+        return player.colorPreference;
+      }
+      else if (opponent.colorPreference != tournament::COLOR_NONE)
+      {
+        return invert(opponent.colorPreference);
+      }
+      else
+      {
+        return tournament::COLOR_NONE;
+      }
+    }
+    else if (
+      player.absoluteColorPreference()
+        && (player.colorImbalance > opponent.colorImbalance
+              || !opponent.absoluteColorPreference()))
+    {
+      return player.colorPreference;
+    }
+    else if (
+      opponent.absoluteColorPreference()
+        && (opponent.colorImbalance > player.colorImbalance
+              || !player.absoluteColorPreference()))
+    {
+      return invert(opponent.colorPreference);
+    }
+    else if (
+      player.strongColorPreference && !opponent.strongColorPreference)
+    {
+      return player.colorPreference;
+    }
+    else if (
+      opponent.strongColorPreference && !player.strongColorPreference)
+    {
+      return invert(opponent.colorPreference);
+    }
+    else
+    {
+      tournament::Color playerColor;
+      tournament::Color opponentColor;
+      findFirstColorDifference(
+        player,
+        opponent,
+        playerColor,
+        opponentColor);
+      if (
+        playerColor != tournament::COLOR_NONE
+          && opponentColor != tournament::COLOR_NONE)
+      {
+        return opponentColor;
+      }
+      else
+      {
+        return tournament::COLOR_NONE;
+      }
+    }
+  }
+
+
+  /**
    * Produce the checklist file, given a function that can provide the values
    * for the columns specific to the Swiss system used, as well as the order
    * in which players should appear. Extra line breaks will be added between
@@ -332,7 +408,12 @@ namespace swisssystems
     ostream << std::endl << std::endl << std::endl;
   }
 
+#ifndef OMIT_DUTCH
+  constexpr dutch::DutchInfo dutchInfo{ };
+#endif
+#ifndef OMIT_BURSTEIN
   constexpr burstein::BursteinInfo bursteinInfo{ };
+#endif
 
   /**
    * Retrieve the Info object for the specified SwissSystem.
@@ -341,12 +422,16 @@ namespace swisssystems
   {
     switch (swissSystem)
     {
+#ifndef OMIT_DUTCH
+    case DUTCH:
+      return dutchInfo;
+#endif
+#ifndef OMIT_BURSTEIN
     case BURSTEIN:
       return bursteinInfo;
-      break;
+#endif
     default:
-      assert(false);
+      throw std::logic_error("");
     }
-    return bursteinInfo;
   }
 }
