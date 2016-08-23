@@ -345,10 +345,15 @@ namespace swisssystems
           // Maximize the number of pairs in the next bracket.
           if (finalBrackets)
           {
-            shiftEdgeWeight<max>(result, playerCountBits);
-            shiftEdgeWeight<max>(result, 1u);
+            shiftEdgeWeight<max>(
+              result,
+              std::max(playerCountBits, nextScoreGroupPlayerCountBits));
+            shiftEdgeWeight<max>(result, 3u);
           }
-          shiftEdgeWeight<max>(result, nextScoreGroupPlayerCountBits);
+          else
+          {
+            shiftEdgeWeight<max>(result, nextScoreGroupPlayerCountBits);
+          }
           result |=
             max ? 0u
               : finalBrackets
