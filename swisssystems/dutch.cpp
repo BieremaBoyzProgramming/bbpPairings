@@ -267,9 +267,10 @@ namespace swisssystems
         computeEdgeWeight(
           const tournament::Player &higherPlayer,
           const tournament::Player &lowerPlayer,
+          const bool specialBrackets,
           const bool finalBrackets,
-          const bool higherPlayerInCurrentScoreGroup,
-          const bool lowerPlayerInCurrentScoreGroup,
+          const bool higherPlayerInCurrentBracket,
+          const bool lowerPlayerInCurrentBracket,
           const tournament::Tournament &tournament,
           const unsigned int playerCountBits,
           const unsigned int nextScoreGroupPlayerCountBits,
@@ -297,7 +298,7 @@ namespace swisssystems
         }
 
         // Enforce completion requirement and bye eligibility.
-        if (finalBrackets)
+        if (specialBrackets)
         {
           result |=
             max
@@ -310,11 +311,11 @@ namespace swisssystems
         // Maximize the number of pairs in the current pairing bracket.
         assert(playerCountBits);
         shiftEdgeWeight<max>(result, playerCountBits);
-        result |= max ? !result : lowerPlayerInCurrentScoreGroup;
+        result |= max ? !result : lowerPlayerInCurrentBracket;
 
         // Minimize the pairing score difference in the current bracket.
         shiftEdgeWeight<max>(result, scoreDifferenceShift);
-        if (!max && lowerPlayerInCurrentScoreGroup)
+        if (!max && lowerPlayerInCurrentBracket)
         {
           result +=
             ((result & 0u) | 1u)
@@ -337,18 +338,30 @@ namespace swisssystems
                     - lowerPlayer.scoreWithAcceleration())->second;
         }
 
-        if (!finalBrackets)
+        if (!specialBrackets)
         {
-          // Maximize the number of pairs in the next bracket.
           assert(nextScoreGroupPlayerCountBits);
+
+          // Maximize the number of pairs in the next bracket.
+          if (finalBrackets)
+          {
+            shiftEdgeWeight<max>(result, playerCountBits);
+            shiftEdgeWeight<max>(result, 1u);
+          }
           shiftEdgeWeight<max>(result, nextScoreGroupPlayerCountBits);
-          result |= !max;
+          result |=
+            max ? 0u
+              : finalBrackets
+                ? 1u
+                    + !eligibleForBye(higherPlayer, tournament)
+                    + !eligibleForBye(lowerPlayer, tournament)
+              : !lowerPlayerInCurrentBracket;
 
           // Maximize the pair scoring difference in the next bracket.
           shiftEdgeWeight<max>(result, scoreDifferenceShift);
           if (!max)
           {
-            if (higherPlayerInCurrentScoreGroup)
+            if (higherPlayerInCurrentBracket)
             {
               result |=
                 ((result & 0u) | 1u)
@@ -359,7 +372,7 @@ namespace swisssystems
                         ) + 10u
                       )->second;
             }
-            if (lowerPlayerInCurrentScoreGroup)
+            if (lowerPlayerInCurrentBracket)
             {
               result +=
                 ((result & 0u) | 1u)
@@ -378,14 +391,14 @@ namespace swisssystems
           result,
           lowerPlayer,
           higherPlayer,
-          lowerPlayerInCurrentScoreGroup,
+          lowerPlayerInCurrentBracket,
           playerCountBits);
 
         if (tournament.playedRounds)
         {
           // Minimize downfloaters repeated from the previous round.
           shiftEdgeWeight<max>(result, playerCountBits);
-          if (!max && lowerPlayerInCurrentScoreGroup)
+          if (!max && lowerPlayerInCurrentBracket)
           {
             result |= getFloat(lowerPlayer, 1, tournament) == FLOAT_DOWN;
             result +=
@@ -398,7 +411,7 @@ namespace swisssystems
           shiftEdgeWeight<max>(result, playerCountBits);
           result -=
             !max
-              && lowerPlayerInCurrentScoreGroup
+              && lowerPlayerInCurrentBracket
               && higherPlayer.scoreWithAcceleration()
                   > lowerPlayer.scoreWithAcceleration()
               && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP;
@@ -407,7 +420,7 @@ namespace swisssystems
         {
           // Minimize downfloaters repeated from two rounds before.
           shiftEdgeWeight<max>(result, playerCountBits);
-          if (!max && lowerPlayerInCurrentScoreGroup)
+          if (!max && lowerPlayerInCurrentBracket)
           {
             result |= getFloat(lowerPlayer, 2, tournament) == FLOAT_DOWN;
             result +=
@@ -420,7 +433,7 @@ namespace swisssystems
           shiftEdgeWeight<max>(result, playerCountBits);
           result -=
             !max
-              && lowerPlayerInCurrentScoreGroup
+              && lowerPlayerInCurrentBracket
               && higherPlayer.scoreWithAcceleration()
                   > lowerPlayer.scoreWithAcceleration()
               && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP;
@@ -431,7 +444,7 @@ namespace swisssystems
           // Minimize the score differences of downfloaters repeated from the
           // previous round.
           shiftEdgeWeight<max>(result, scoreDifferenceShift);
-          if (!max && lowerPlayerInCurrentScoreGroup)
+          if (!max && lowerPlayerInCurrentBracket)
           {
             result +=
               ((result & 0u)
@@ -470,7 +483,7 @@ namespace swisssystems
           shiftEdgeWeight<max>(result, scoreDifferenceShift);
           if (
             !max
-              && lowerPlayerInCurrentScoreGroup
+              && lowerPlayerInCurrentBracket
               && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP
               && higherPlayer.scoreWithAcceleration()
                   > lowerPlayer.scoreWithAcceleration())
@@ -488,7 +501,7 @@ namespace swisssystems
           // Minimize the score differences of downfloaters repeated from two
           // rounds before.
           shiftEdgeWeight<max>(result, scoreDifferenceShift);
-          if (!max && lowerPlayerInCurrentScoreGroup)
+          if (!max && lowerPlayerInCurrentBracket)
           {
             result +=
               ((result & 0u)
@@ -527,7 +540,7 @@ namespace swisssystems
           shiftEdgeWeight<max>(result, scoreDifferenceShift);
           if (
             !max
-              && lowerPlayerInCurrentScoreGroup
+              && lowerPlayerInCurrentBracket
               && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP
               && higherPlayer.scoreWithAcceleration()
                   > lowerPlayer.scoreWithAcceleration())
@@ -664,6 +677,7 @@ namespace swisssystems
         const std::vector<const tournament::Player *> &playersByIndex,
         const tournament::player_index scoreGroupBegin,
         const tournament::player_index nextScoreGroupBegin,
+        const bool specialBrackets,
         const bool finalBrackets,
         const tournament::Tournament &tournament)
       {
@@ -751,6 +765,7 @@ namespace swisssystems
         computeEdgeWeight<true>(
           *playersByIndex[0],
           *playersByIndex[0],
+          specialBrackets,
           finalBrackets,
           true,
           true,
@@ -766,6 +781,7 @@ namespace swisssystems
         const auto edgeWeightComputer =
           [&playersByIndex,
             nextScoreGroupBegin,
+            specialBrackets,
             finalBrackets,
             &tournament,
             playerCountBits,
@@ -782,6 +798,7 @@ namespace swisssystems
               computeEdgeWeight(
                 *playersByIndex[smallerPlayerIndex],
                 *playersByIndex[largerPlayerIndex],
+                specialBrackets,
                 finalBrackets,
                 smallerPlayerIndex < nextScoreGroupBegin,
                 largerPlayerIndex < nextScoreGroupBegin,
@@ -953,7 +970,7 @@ namespace swisssystems
       /**
        * true if we are pairing the last pairing bracket or the PPB.
        */
-      bool finalBrackets = nextScoreGroupIterator == sortedPlayers.end();
+      bool specialBrackets = nextScoreGroupIterator == sortedPlayers.end();
 
       /**
        * The number of moved down players in the current pairing bracket.
@@ -976,7 +993,7 @@ namespace swisssystems
           nextScoreGroupIterator;
         while (
           nextScoreGroupIterator != sortedPlayers.end()
-            && (finalBrackets
+            && (specialBrackets
                   || (*nextScoreGroupIterator)->scoreWithAcceleration()
                       >= (*scoreGroupIterator)->scoreWithAcceleration()))
         {
@@ -995,7 +1012,8 @@ namespace swisssystems
             playersByIndex,
             scoreGroupBegin,
             nextScoreGroupBegin,
-            finalBrackets,
+            specialBrackets,
+            nextScoreGroupIterator == sortedPlayers.end(),
             tournament);
 
         // Initialize the matching computer used to optimize the pairing in the
@@ -1580,7 +1598,7 @@ namespace swisssystems
           ++remainderIndex;
         }
 
-        if (!finalBrackets)
+        if (!specialBrackets)
         {
           // Check whether the selected downfloaters allow completion of the
           // round pairing.
@@ -1595,13 +1613,13 @@ namespace swisssystems
               vertexIndices.begin() + nextScoreGroupBegin,
               vertexIndices.end());
             nextScoreGroupIterator = scoreGroupIterator;
-            finalBrackets = true;
+            specialBrackets = true;
             continue;
           }
         }
 
         // Compute the new values for the next pairing bracket.
-        finalBrackets = nextScoreGroupIterator == sortedPlayers.end();
+        specialBrackets = nextScoreGroupIterator == sortedPlayers.end();
 
         std::vector<const tournament::Player *> newPlayersByIndex;
         std::vector<tournament::player_index> newVertexIndices;

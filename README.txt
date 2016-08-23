@@ -13,10 +13,7 @@ Pairings and Program Commission. To be clear, the program is not endorsed by
 FIDE or the SPP. It is not a full tournament manager, just an engine for
 computing the pairings.
 
-The program currently implements the Burstein system and the current (as of mid-
-2016) draft of the 2017 Dutch rules. Since the new Dutch rules are still being
-finalized, support for Dutch pairings should be considered experimental, and
-it may be updated or dropped between releases without warning.
+The program currently implements the Burstein system and the 2017 Dutch rules.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
