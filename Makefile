@@ -99,7 +99,11 @@ ifeq ($(COMP),gcc)
 		-Wvector-operation-performance
 
 	ifeq ($(HOST),Windows)
-		CXX=x86_64-w64-mingw32-g++
+		ifeq ($(bits),32)
+			CXX=i686-w64-mingw32-g++
+		else
+			CXX=x86_64-w64-mingw32-g++
+		endif
 # LTO with static linking causes a segfault with mingw-w64.
 		ifneq ($(static),yes)
 			ifeq ($(optimize),yes)
