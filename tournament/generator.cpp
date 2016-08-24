@@ -347,7 +347,7 @@ namespace tournament
          * Pick a random game from the remaining eligible games.
          */
         game_index gameIndex =
-          utility::random::uniformUint(randomEngine, 0u, eligibleGames);
+          utility::random::uniformUint(randomEngine, 0u, eligibleGames - 1u);
         // Determine which player the game belongs to.
         player_index playerIndex{ };
         for (
@@ -401,7 +401,7 @@ namespace tournament
       {
         // Choose a random game from the eligible remaining games.
         game_index gameIndex =
-          utility::random::uniformUint(randomEngine, 0, eligibleGames);
+          utility::random::uniformUint(randomEngine, 0, eligibleGames - 1u);
 
         // Determine which player the game belongs to.
         player_index playerIndex{ };
@@ -417,6 +417,7 @@ namespace tournament
           ++playerIndex;
         }
         --eligibleGames;
+        assert(playerIndex < result.playersByRank.size());
         --remainingCounts[playerIndex];
         if (!halfPointByeCounts[playerIndex]++)
         {
@@ -444,7 +445,7 @@ namespace tournament
                     0u,
                     configuration.roundsNumber
                       - result.playedRounds
-                      - 1u
+                      - 2u
                   ) < halfPointByeCounts[rankIndex])
           {
             player.matches.emplace_back(
@@ -462,6 +463,7 @@ namespace tournament
               configuration.roundsNumber
                 - result.playedRounds
                 - halfPointByeCounts[rankIndex]
+                - 1u
             ) < zeroPointByeCounts[rankIndex]
           )
           {
