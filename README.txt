@@ -4,7 +4,7 @@ copyright (C) 2016
 See LICENSE.txt for additional copyright and licensing information.
 
 The most recent version of this program can be downloaded at
-https://github.com/BieremaBoyzProgramming/bbpPairings/releases .
+<https://github.com/BieremaBoyzProgramming/bbpPairings/releases>.
 
 
 BBP Pairings is an engine for pairing players in a Swiss-system chess
@@ -18,7 +18,7 @@ The program currently implements the Burstein system and the 2017 Dutch rules.
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
 Roberto Ricca). The remainder of this document lists the points of divergence.
-For more informaton about JaVaFo, please visit www.rrweb.org/javafo . This
+For more informaton about JaVaFo, please visit <www.rrweb.org/javafo>. This
 documentation assumes full understanding of the JaVaFo AUM.
 
 Hereafter, we will use the name "JaVaFo" to refer to JaVaFo 1.4.
