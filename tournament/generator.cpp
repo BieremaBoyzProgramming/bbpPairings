@@ -615,7 +615,7 @@ namespace tournament
           Player &player = result.players[playerIndex];
 
           const points newPoints =
-            result.getPoints(player.matches.back().matchScore);
+            result.getPoints(player, player.matches.back());
           player.scoreWithoutAcceleration += newPoints;
           if (player.scoreWithoutAcceleration < newPoints)
           {

@@ -138,7 +138,7 @@ namespace swisssystems
   {
     for (const tournament::Match &match : player.matches)
     {
-      if (!match.gameWasPlayed && tournament.getPoints(match.matchScore))
+      if (!match.gameWasPlayed && tournament.getPoints(player, match))
       {
         return false;
       }

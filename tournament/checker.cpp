@@ -229,7 +229,7 @@ namespace tournament
             player.matches.push_back(match);
           }
           player.scoreWithoutAcceleration +=
-            tournament.getPoints(match.matchScore);
+            tournament.getPoints(player, match);
         }
       }
     }

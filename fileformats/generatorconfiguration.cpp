@@ -61,6 +61,7 @@ namespace fileformats
             std::getline(stringStream, propertyName, '=');
             std::string propertyValue;
             std::getline(stringStream, propertyValue);
+            bool usePairingAllocatedByeValue{ };
             if (stringStream)
             {
               try
@@ -133,12 +134,42 @@ namespace fileformats
                   configuration.tournament.pointsForWin =
                     utility::uintstringconversion
                       ::parse<tournament::points>(propertyValue, 1);
+                  if (!usePairingAllocatedByeValue)
+                  {
+                    configuration.tournament.pointsForPairingAllocatedBye =
+                      configuration.tournament.pointsForWin;
+                  }
                 }
                 else if (propertyName == "PointsForDraw")
                 {
                   configuration.tournament.pointsForDraw =
                     utility::uintstringconversion
                       ::parse<tournament::points>(propertyValue, 1);
+                }
+                else if (propertyName == "PointsForLoss")
+                {
+                  configuration.tournament.pointsForLoss =
+                    utility::uintstringconversion
+                      ::parse<tournament::points>(propertyValue, 1);
+                }
+                else if (propertyName == "PointsForZPB")
+                {
+                  configuration.tournament.pointsForZeroPointBye =
+                    utility::uintstringconversion
+                      ::parse<tournament::points>(propertyValue, 1);
+                }
+                else if (propertyName == "PointsForForfeitLoss")
+                {
+                  configuration.tournament.pointsForForfeitLoss =
+                    utility::uintstringconversion
+                      ::parse<tournament::points>(propertyValue, 1);
+                }
+                else if (propertyName == "PointsForPAB")
+                {
+                  configuration.tournament.pointsForPairingAllocatedBye =
+                    utility::uintstringconversion
+                      ::parse<tournament::points>(propertyValue, 1);
+                  usePairingAllocatedByeValue = true;
                 }
                 else if (propertyName == "Accelerated")
                 {

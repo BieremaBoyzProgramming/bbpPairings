@@ -43,17 +43,22 @@ opponents' tiebreak scores, the program needs to know the number of points given
 for draws and cannot infer it.
 
 For this reason, we must introduce an extension to the TRF(bx) format. The
-extension uses codes BBW and BBD for specifying the number of points awarded for
-a win and a draw, respectively. The format is
+extension uses codes BBW, BBD, BBL, BBZ, BBF, and BBU for specifying the number
+of points awarded for a win, draw, played loss, zero-point bye, forfeit loss, or
+pairing-allocated bye, respectively. The format is
 BBW pp.p
 BBD pp.p
+...
 Thus, for a tournament with 3 points for wins and 1 point for draws, the TRF(bx)
 should contain the lines
 BBW  3.0
 BBD  1.0
+If BBU is not specified, it defaults to the score for a win. All other
+parameters default individually to particular values (1.0, 0.5, or 0.0) if not
+specified.
 
-If the tournament uses the standard point system (as of the 2014 rules), that
-is, 1 point for wins and 0.5 points for draws, these lines are not necessary.
+If the tournament uses the standard point system (as of the 2014 rules), these
+lines are not necessary.
 
 Because this requirement causes an incompatibility with the TRF(x)
 representation of non-standard point system tournaments that could be overlooked
@@ -61,9 +66,14 @@ when exchanging files, BBP Pairings checks that all players' scores are computed
 correctly from the tournament results. If this is not the case, it issues an
 error message and refuses to proceed.
 
-Future versions may relax the strict requirement to permit point systems that
-are linear multiples of the standard system, such as the 2-1-0 point system
-currently being discussed.
+The engine for the Burstein system expects the point value for pairing-allocated
+byes to equal one of the other point value parameters when computing virtual
+opponent scores for the Buchholz and Sonneborn-Berger scores. If this is not the
+case, it approximates the pairing-allocated bye point value as a win, loss, or
+draw (rounding down), only for the purposes of choosing the virtual opponent
+score for the round. In an unplayed game counted as a win, the forfeit loss
+score is currently used as the the virtual opponent score, not the played loss.
+These behaviors may change in future versions if criticized.
 
 
 BBP Pairings does not support random selection of the initial piece color. The
@@ -93,6 +103,11 @@ AUM.
 
 Random Tournament Generator
 ---------------------------
+The point value parameters not supported in JaVaFo 1.4 can be set using the keys
+PointsForLoss, PointsForZPB, PointsForForfeitLoss, and PointsForPAB. All of
+these have default values of 0.0, except the last, which by default is set equal
+to PointsForWin.
+
 BBP Pairings introduces a new option for generating tournaments paired using the
 Burstein system. Since the Burstein system has a specific acceleration system
 included in its rules, the "Accelerated" option instructs the generator to apply

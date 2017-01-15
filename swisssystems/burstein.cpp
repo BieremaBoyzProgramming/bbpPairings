@@ -60,7 +60,7 @@ namespace swisssystems
           player.accelerations.push_back(
             player.isValid && player.rankIndex < rankBound >> 1
               ? tournament.pointsForWin
-              : 0);
+              : 0u);
         }
       }
     }
@@ -98,13 +98,38 @@ namespace swisssystems
        * Get the adjusted score for a game: an unplayed game counts as a draw.
        */
       tournament::points getAdjustedPoints(
+        const tournament::Player &player,
         const tournament::Match &match,
         const tournament::Tournament &tournament)
       {
         return
           match.gameWasPlayed
-            ? tournament.getPoints(match.matchScore)
+            ? tournament.getPoints(player, match)
             : tournament.pointsForDraw;
+      }
+
+      /**
+       * Get the virtual score of the opponent in a non-played game.
+       */
+      tournament::points getVirtualOpponentScore(
+        const tournament::Player &player,
+        const tournament::Match &match,
+        const tournament::Tournament &tournament)
+      {
+        return
+          match.matchScore == tournament::MATCH_SCORE_LOSS
+                ? tournament.pointsForWin
+            : match.matchScore == tournament::MATCH_SCORE_DRAW
+                ? tournament.pointsForDraw
+            : match.opponent == player.id
+                  && match.participatedInPairing
+                  && tournament.pointsForPairingAllocatedBye
+                      < tournament.pointsForWin
+                ? tournament.pointsForPairingAllocatedBye
+                      < tournament.pointsForDraw
+                    ? tournament.pointsForWin
+                    : tournament.pointsForDraw
+            : tournament.pointsForForfeitLoss;
       }
 
       points_product calculateSonnebornBerger(
@@ -153,18 +178,23 @@ namespace swisssystems
           {
             const points_product addend =
               points_product{ adjustedScores[match.opponent] }
-                * tournament.getPoints(match.matchScore);
+                * tournament.getPoints(player, match);
             result += addend;
             if (
               result < addend
                 || (adjustedScores[match.opponent]
                       && addend / adjustedScores[match.opponent]
-                          < tournament.getPoints(match.matchScore)))
+                          < tournament.getPoints(player, match)))
             {
               assert(
                 tournament.playedRounds > tournament::maxRounds
                   || tournament.pointsForWin > tournament::maxPoints
-                  || tournament.pointsForDraw > tournament::maxPoints);
+                  || tournament.pointsForDraw > tournament::maxPoints
+                  || tournament.pointsForLoss > tournament::maxPoints
+                  || tournament.pointsForForfeitLoss > tournament::maxPoints
+                  || tournament.pointsForZeroPointBye > tournament::maxPoints
+                  || tournament.pointsForPairingAllocatedBye
+                      > tournament::maxPoints);
               throw tournament::BuildLimitExceededException(
                 "This build supports at most "
                   + (tournament.playedRounds > tournament::maxRounds
@@ -180,9 +210,9 @@ namespace swisssystems
           {
             const adjusted_score virtualScore =
               virtualPoints
-                + tournament.getPoints(tournament::invert(match.matchScore));
+                + getVirtualOpponentScore(player, match, tournament);
             const points_product scaledScore =
-              points_product{ tournament.getPoints(match.matchScore) }
+              points_product{ tournament.getPoints(player, match) }
                 * virtualScore;
             result += scaledScore;
             if (
@@ -190,12 +220,17 @@ namespace swisssystems
                 || virtualScore < virtualPoints
                 || (virtualScore
                       && scaledScore / virtualScore
-                          < tournament.getPoints(match.matchScore)))
+                          < tournament.getPoints(player, match)))
             {
               assert(
                 tournament.playedRounds > tournament::maxRounds
                   || tournament.pointsForWin > tournament::maxPoints
-                  || tournament.pointsForDraw > tournament::maxPoints);
+                  || tournament.pointsForDraw > tournament::maxPoints
+                  || tournament.pointsForLoss > tournament::maxPoints
+                  || tournament.pointsForForfeitLoss > tournament::maxPoints
+                  || tournament.pointsForZeroPointBye > tournament::maxPoints
+                  || tournament.pointsForPairingAllocatedBye
+                      > tournament::maxPoints);
               throw tournament::BuildLimitExceededException(
                 "This build supports at most "
                   + (tournament.playedRounds > tournament::maxRounds
@@ -207,15 +242,20 @@ namespace swisssystems
                           + " points per match."));
             }
           }
-          virtualPoints += tournament.getPoints(match.matchScore);
+          virtualPoints += tournament.getPoints(player, match);
           if (
-            virtualPoints < tournament.getPoints(match.matchScore)
+            virtualPoints < tournament.getPoints(player, match)
               && virtualPoints >= tournament.pointsForDraw)
           {
             assert(
               tournament.playedRounds > tournament::maxRounds
                 || tournament.pointsForWin > tournament::maxPoints
-                || tournament.pointsForDraw > tournament::maxPoints);
+                || tournament.pointsForDraw > tournament::maxPoints
+                || tournament.pointsForLoss > tournament::maxPoints
+                || tournament.pointsForForfeitLoss > tournament::maxPoints
+                || tournament.pointsForZeroPointBye > tournament::maxPoints
+                || tournament.pointsForPairingAllocatedBye
+                    > tournament::maxPoints);
             throw tournament::BuildLimitExceededException(
               "This build supports at most "
                 + (tournament.playedRounds > tournament::maxRounds
@@ -288,13 +328,18 @@ namespace swisssystems
           {
             adjustment =
               virtualPoints
-                + tournament.getPoints(tournament::invert(match.matchScore));
+                + getVirtualOpponentScore(player, match, tournament);
             if (adjustment < virtualPoints)
             {
               assert(
                 tournament.playedRounds > tournament::maxRounds
                   || tournament.pointsForWin > tournament::maxPoints
-                  || tournament.pointsForDraw > tournament::maxPoints);
+                  || tournament.pointsForDraw > tournament::maxPoints
+                  || tournament.pointsForLoss > tournament::maxPoints
+                  || tournament.pointsForForfeitLoss > tournament::maxPoints
+                  || tournament.pointsForZeroPointBye > tournament::maxPoints
+                  || tournament.pointsForPairingAllocatedBye
+                      > tournament::maxPoints);
               throw tournament::BuildLimitExceededException(
                 "This build supports at most "
                   + (tournament.playedRounds > tournament::maxRounds
@@ -312,7 +357,12 @@ namespace swisssystems
             assert(
               tournament.playedRounds > tournament::maxRounds
                 || tournament.pointsForWin > tournament::maxPoints
-                || tournament.pointsForDraw > tournament::maxPoints);
+                || tournament.pointsForDraw > tournament::maxPoints
+                || tournament.pointsForLoss > tournament::maxPoints
+                || tournament.pointsForForfeitLoss > tournament::maxPoints
+                || tournament.pointsForZeroPointBye > tournament::maxPoints
+                || tournament.pointsForPairingAllocatedBye
+                    > tournament::maxPoints);
             throw tournament::BuildLimitExceededException(
               "This build supports at most "
                 + (tournament.playedRounds > tournament::maxRounds
@@ -326,15 +376,20 @@ namespace swisssystems
           min = std::min(min, adjustment);
           max = std::max(max, adjustment);
 
-          virtualPoints += tournament.getPoints(match.matchScore);
+          virtualPoints += tournament.getPoints(player, match);
           if (
-            virtualPoints < tournament.getPoints(match.matchScore)
+            virtualPoints < tournament.getPoints(player, match)
               && virtualPoints >= tournament.pointsForDraw)
           {
             assert(
               tournament.playedRounds > tournament::maxRounds
                 || tournament.pointsForWin > tournament::maxPoints
-                || tournament.pointsForDraw > tournament::maxPoints);
+                || tournament.pointsForDraw > tournament::maxPoint
+                || tournament.pointsForLoss > tournament::maxPoints
+                || tournament.pointsForForfeitLoss > tournament::maxPoints
+                || tournament.pointsForZeroPointBye > tournament::maxPoints
+                || tournament.pointsForPairingAllocatedBye
+                    > tournament::maxPoints);
             throw tournament::BuildLimitExceededException(
               "This build supports at most "
                 + (tournament.playedRounds > tournament::maxRounds
@@ -393,6 +448,11 @@ namespace swisssystems
               tournament.playedRounds > tournament::maxRounds
                 || tournament.pointsForWin > tournament::maxPoints
                 || tournament.pointsForDraw > tournament::maxPoints
+                || tournament.pointsForLoss > tournament::maxPoints
+                || tournament.pointsForForfeitLoss > tournament::maxPoints
+                || tournament.pointsForZeroPointBye > tournament::maxPoints
+                || tournament.pointsForPairingAllocatedBye
+                    > tournament::maxPoints
                 || playerScore > tournament::maxPoints);
             throw tournament::BuildLimitExceededException(
               playerScore > tournament::maxPoints
@@ -661,7 +721,7 @@ namespace swisssystems
           {
             if (matchIndex++ < tournament.playedRounds)
             {
-              adjustedScore += getAdjustedPoints(match, tournament);
+              adjustedScore += getAdjustedPoints(player, match, tournament);
             }
             if (match.gameWasPlayed)
             {

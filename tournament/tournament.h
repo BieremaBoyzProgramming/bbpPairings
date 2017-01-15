@@ -302,13 +302,23 @@ namespace tournament
     round_index expectedRounds{ };
     points pointsForWin{ 10u };
     points pointsForDraw{ 5u };
+    points pointsForLoss{ 0u };
+    points pointsForZeroPointBye{ 0u };
+    points pointsForForfeitLoss{ 0u };
+    points pointsForPairingAllocatedBye{ 10u };
     Color initialColor = COLOR_NONE;
 
-    points getPoints(const MatchScore matchScore) const &
+    points getPoints(const Player &player, const Match &match) const &
     {
       return
-        matchScore == MATCH_SCORE_LOSS ? 0
-          : matchScore == MATCH_SCORE_WIN ? pointsForWin
+        match.matchScore == MATCH_SCORE_LOSS
+            ? match.participatedInPairing
+                ? match.gameWasPlayed ? pointsForLoss : pointsForForfeitLoss
+                : pointsForZeroPointBye
+          : match.matchScore == MATCH_SCORE_WIN
+              ? match.opponent == player.id && match.participatedInPairing
+                  ? pointsForPairingAllocatedBye
+                  : pointsForWin
           : pointsForDraw;
     }
 
@@ -332,7 +342,7 @@ namespace tournament
     while (roundsBack > 0u)
     {
       --roundIndex;
-      score -= tournament.getPoints(matches[roundIndex].matchScore);
+      score -= tournament.getPoints(*this, matches[roundIndex]);
       --roundsBack;
     }
 

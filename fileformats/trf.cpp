@@ -423,6 +423,19 @@ namespace fileformats
       }
 
       /**
+       * Read a line containing a point value, throwing an InvalidLineException
+       * if it is improperly formatted.
+       */
+      tournament::points readPoints(const std::u32string &line)
+      {
+        if (line.length() < 8)
+        {
+          throw InvalidLineException();
+        }
+        return readScore(line.substr(4, 8));
+      }
+
+      /**
        * Finalize the number of played rounds in the tournament, and add empty
        * games to the end of the list of matches for each player who doesn't
        * have enough.
@@ -615,8 +628,8 @@ namespace fileformats
               {
                 break;
               }
-              points += tournament.getPoints(match.matchScore);
-              if (points < tournament.getPoints(match.matchScore))
+              points += tournament.getPoints(player, match);
+              if (points < tournament.getPoints(player, match))
               {
                 throw tournament::BuildLimitExceededException(
                   "This build only supports scores up to "
@@ -748,6 +761,7 @@ namespace fileformats
     {
       tournament::Tournament result;
       bool useRank{ };
+      bool usePairingAllocatedByeScore{ };
       std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert;
       std::string buffer;
       while (stream.good())
@@ -852,19 +866,32 @@ namespace fileformats
               }
               else if (prefix == U"BBW")
               {
-                if (line.length() < 8)
+                result.pointsForWin = readPoints(line);
+                if (!usePairingAllocatedByeScore)
                 {
-                  throw InvalidLineException();
+                  result.pointsForPairingAllocatedBye = result.pointsForWin;
                 }
-                result.pointsForWin = readScore(line.substr(4, 8));
               }
               else if (prefix == U"BBD")
               {
-                if (line.length() < 8)
-                {
-                  throw InvalidLineException();
-                }
-                result.pointsForDraw = readScore(line.substr(4, 8));
+                result.pointsForDraw = readPoints(line);
+              }
+              else if (prefix == U"BBL")
+              {
+                result.pointsForLoss = readPoints(line);
+              }
+              else if (prefix == U"BBZ")
+              {
+                result.pointsForZeroPointBye = readPoints(line);
+              }
+              else if (prefix == U"BBF")
+              {
+                result.pointsForForfeitLoss = readPoints(line);
+              }
+              else if (prefix == U"BBU")
+              {
+                result.pointsForPairingAllocatedBye = readPoints(line);
+                usePairingAllocatedByeScore = true;
               }
             }
             catch (const InvalidLineException &exception)
@@ -958,21 +985,72 @@ namespace fileformats
       }
       outputStream << '\r';
 
-      if (tournament.pointsForWin != 10u || tournament.pointsForDraw != 5u)
+      if (
+        tournament.pointsForWin != 10u
+          || tournament.pointsForDraw != 5u
+          || tournament.pointsForLoss != 0u
+          || tournament.pointsForZeroPointBye != 0u
+          || tournament.pointsForForfeitLoss != 0u
+          || tournament.pointsForPairingAllocatedBye != 10u)
       {
-        if (tournament.pointsForWin > 999u || tournament.pointsForDraw > 999u)
+        if (
+          tournament.pointsForWin > 999u
+            || tournament.pointsForDraw > 999u
+            || tournament.pointsForLoss > 999u
+            || tournament.pointsForZeroPointBye > 999u
+            || tournament.pointsForForfeitLoss > 999u
+            || tournament.pointsForPairingAllocatedBye > 999u)
         {
           throw LimitExceededException(
             "The output file format does not support scores above 99.9.");
         }
-        outputStream << "BBW "
-          << std::setw(4)
-          << utility::uintstringconversion::toString(tournament.pointsForWin, 1)
-          << "\rBBD "
-          << std::setw(4)
-          << utility::uintstringconversion
-              ::toString(tournament.pointsForDraw, 1)
-          << "\r\r";
+        if (
+          tournament.pointsForWin != 10u
+            || tournament.pointsForDraw != 5u
+            || tournament.pointsForLoss != 0u
+            || tournament.pointsForZeroPointBye != 0u
+            || tournament.pointsForForfeitLoss != 0u)
+        {
+          outputStream << "BBW "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForWin, 1)
+            << "\rBBD "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForDraw, 1)
+            << "\r";
+        }
+        if (
+          tournament.pointsForLoss != 0u
+            || tournament.pointsForZeroPointBye != 0u
+            || tournament.pointsForForfeitLoss != 0u)
+        {
+          outputStream
+            << "BBL "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForLoss, 1)
+            << "\rBBZ "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForZeroPointBye, 1)
+            << "\rBBF "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForForfeitLoss, 1)
+            << "\r";
+        }
+        if (tournament.pointsForWin != tournament.pointsForPairingAllocatedBye)
+        {
+          outputStream
+            << "BBU "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForPairingAllocatedBye, 1)
+            << "\r";
+        }
+        outputStream << "\r";
       }
 
       for (const tournament::Player &player : tournament.players)
