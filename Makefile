@@ -104,13 +104,9 @@ ifeq ($(COMP),gcc)
 		else
 			CXX=x86_64-w64-mingw32-g++
 		endif
-# LTO with static linking causes a segfault with mingw-w64.
-		ifneq ($(static),yes)
-			ifeq ($(optimize),yes)
-				COMPILER_FLAGS += -flto
-			endif
+		ifeq ($(optimize),yes)
+			COMPILER_FLAGS += -flto
 		endif
-		UNOPTIMIZED_FLAGS = $(COMPILER_FLAGS)
 		CXXFLAGS += $(COMPILER_FLAGS)
 	else
 		CXX=g++
@@ -120,7 +116,6 @@ ifeq ($(COMP),gcc)
 			CXXFLAGS += -flto
 		endif
 		LDFLAGS += -lstdc++fs
-		UNOPTIMIZED_FLAGS = $(CXXFLAGS)
 	endif
 endif
 
@@ -141,8 +136,5 @@ default:
 
 bbpPairings.exe: $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
-
-# tournament/generator.o fails to compile with optimization using mingw-w64.
-tournament/generator.o: CXXFLAGS := $(UNOPTIMIZED_FLAGS)
 
 -include $(OBJECTS:%.o=%.d)
