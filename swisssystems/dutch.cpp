@@ -57,7 +57,7 @@ namespace swisssystems
           if (
             !match.gameWasPlayed
               && match.participatedInPairing
-              && tournament.getPoints(player, match) >= 5u)
+              && match.matchScore == tournament::MATCH_SCORE_WIN)
           {
             return false;
           }
