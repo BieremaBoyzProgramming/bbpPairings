@@ -384,7 +384,7 @@ namespace swisssystems
             assert(
               tournament.playedRounds > tournament::maxRounds
                 || tournament.pointsForWin > tournament::maxPoints
-                || tournament.pointsForDraw > tournament::maxPoint
+                || tournament.pointsForDraw > tournament::maxPoints
                 || tournament.pointsForLoss > tournament::maxPoints
                 || tournament.pointsForForfeitLoss > tournament::maxPoints
                 || tournament.pointsForZeroPointBye > tournament::maxPoints
