@@ -20,14 +20,11 @@
 #define ROOTBLOSSOMIMPL_H
 
 #include <cassert>
-#include <deque>
-#include <memory>
+#include <iterator>
+#include <stdexcept>
 #include <vector>
 
 #include "blossomsig.h"
-#include "blossomiteratorsig.h"
-#include "blossommatchingiteratorsig.h"
-#include "blossomvertexiteratorsig.h"
 #include "parentblossomsig.h"
 #include "rootblossomsig.h"
 #include "vertexsig.h"
@@ -42,19 +39,19 @@ namespace matching
     class Graph;
 
     /**
-     * Return a deque of the RootBlossoms of every other Vertex in the path.
+     * Return a vector of the RootBlossoms of every other Vertex in the path.
      */
     template <typename edge_weight, class PathIterator>
-    inline std::deque<std::shared_ptr<const RootBlossom<edge_weight>>>
+    inline std::vector<RootBlossom<edge_weight> *>
       getRootBlossomsFromPath(
         PathIterator pathIterator,
         const PathIterator endIterator)
     {
-      std::deque<std::shared_ptr<const RootBlossom<edge_weight>>> result;
+      std::vector<RootBlossom<edge_weight> *> result;
       for (
         ;
         pathIterator != endIterator;
-        ++++pathIterator)
+        std::advance(pathIterator, 2))
       {
         result.push_back((*pathIterator)->rootBlossom);
       }
@@ -67,13 +64,20 @@ namespace matching
     template <typename edge_weight>
     inline RootBlossom<edge_weight>::RootBlossom(
         Vertex<edge_weight> &child,
-        const vertex_index vertexIndex)
+        const vertex_index vertexIndex,
+        Graph<edge_weight> &graph)
       : minOuterEdges(
           typename decltype(minOuterEdges)::size_type{ vertexIndex } + 1u),
+        minOuterEdgeResistance(
+          graph.rootBlossomMinOuterEdgeResistances
+            [graph.rootBlossomPool.getIndex(*this)]),
         rootChild(child),
         baseVertex(&child)
     {
-      assert(!minOuterEdges.empty());
+      if (minOuterEdges.empty())
+      {
+        throw std::length_error("");
+      }
     }
     /**
      * Construct a new RootBlossom, using the blossoms of the path of Vertexes
@@ -84,9 +88,9 @@ namespace matching
     inline RootBlossom<edge_weight>::RootBlossom(
         const PathIterator pathBegin,
         const PathIterator pathEnd,
-        const Graph<edge_weight>& graph)
+        Graph<edge_weight>& graph)
       : RootBlossom<edge_weight>(
-          *new ParentBlossom<edge_weight>(*this, pathBegin, pathEnd),
+          graph.parentBlossomPool.construct(*this, pathBegin, pathEnd),
           getRootBlossomsFromPath<edge_weight, PathIterator>(pathBegin, pathEnd
           ),
           graph,
@@ -102,14 +106,16 @@ namespace matching
     inline RootBlossom<edge_weight>::RootBlossom(
         Blossom<edge_weight> &rootChild_,
         Vertex<edge_weight> &baseVertex_,
-        Vertex<edge_weight> *const baseVertexMatch_)
+        Vertex<edge_weight> *const baseVertexMatch_,
+        Graph<edge_weight> &graph)
       : RootBlossom<edge_weight>(
           rootChild_,
           baseVertex_,
           baseVertexMatch_,
           LABEL_ZERO,
           nullptr,
-          nullptr)
+          nullptr,
+          graph)
     { }
 
     /**
@@ -123,8 +129,12 @@ namespace matching
         Vertex<edge_weight> *const baseVertexMatch_,
         const Label label_,
         Vertex<edge_weight> *const labelingVertex_,
-        Vertex<edge_weight> *const labeledVertex_)
+        Vertex<edge_weight> *const labeledVertex_,
+        Graph<edge_weight> &graph)
       : minOuterEdges(rootChild_.rootBlossom->minOuterEdges.size()),
+        minOuterEdgeResistance(
+          graph.rootBlossomMinOuterEdgeResistances
+            [graph.rootBlossomPool.getIndex(*this)]),
         rootChild(rootChild_),
         baseVertex(&baseVertex_),
         baseVertexMatch(baseVertexMatch_),
@@ -132,54 +142,9 @@ namespace matching
         labelingVertex(labelingVertex_),
         labeledVertex(labeledVertex_)
     {
-      rootChild.parentBlossom.reset();
-      const std::shared_ptr<RootBlossom<edge_weight>> sharedPtr(this);
-      for (
-        BlossomIterator<edge_weight> iterator = blossomBegin();
-        iterator != blossomEnd();
-        ++iterator)
-      {
-        iterator->rootBlossom = sharedPtr;
-      }
-    }
-
-    template <typename edge_weight>
-    inline BlossomIterator<edge_weight> RootBlossom<edge_weight>::blossomBegin()
-      const &
-    {
-      return BlossomIterator<edge_weight>(*this);
-    }
-    template <typename edge_weight>
-    inline BlossomIterator<edge_weight> RootBlossom<edge_weight>::blossomEnd()
-      const &
-    {
-      return BlossomIterator<edge_weight>();
-    }
-
-    template <typename edge_weight>
-    inline BlossomVertexIterator<edge_weight>
-      RootBlossom<edge_weight>::blossomVertexBegin() const &
-    {
-      return BlossomVertexIterator<edge_weight>(*this);
-    }
-    template <typename edge_weight>
-    inline BlossomVertexIterator<edge_weight>
-      RootBlossom<edge_weight>::blossomVertexEnd() const &
-    {
-      return BlossomVertexIterator<edge_weight>();
-    }
-
-    template <typename edge_weight>
-    inline BlossomMatchingIterator<edge_weight>
-      RootBlossom<edge_weight>::blossomMatchingBegin() const &
-    {
-      return BlossomMatchingIterator<edge_weight>(*this);
-    }
-    template <typename edge_weight>
-    inline BlossomMatchingIterator<edge_weight>
-      RootBlossom<edge_weight>::blossomMatchingEnd() const &
-    {
-      return BlossomMatchingIterator<edge_weight>();
+      rootChild.parentBlossom = nullptr;
+      rootChild.vertexListTail->nextVertex = nullptr;
+      updateRootBlossomInDescendants(*this);
     }
 
     /**
@@ -199,19 +164,22 @@ namespace matching
       }
       baseVertex = &vertex;
 
-      freeAncestorOfBase(vertex);
+      freeAncestorOfBase(vertex, graph);
 
-      vertex.dualVariable = graph.maxEdgeWeight;
+      vertex.dualVariable = graph.aboveMaxEdgeWeight;
+      vertex.dualVariable >>= 1;
     }
 
     template <typename edge_weight>
     inline RootBlossom<edge_weight>::RootBlossom(
         ParentBlossom<edge_weight> &rootChild_,
-        const std::deque<std::shared_ptr<const RootBlossom<edge_weight>>>
-          &rootBlossoms,
-        const Graph<edge_weight> &graph,
+        const std::vector<RootBlossom<edge_weight> *> &rootBlossoms,
+        Graph<edge_weight> &graph,
         const RootBlossom<edge_weight> &baseRoot)
       : minOuterEdges(baseRoot.minOuterEdges),
+        minOuterEdgeResistance(
+          graph.rootBlossomMinOuterEdgeResistances
+            [graph.rootBlossomPool.getIndex(*this)]),
         rootChild(rootChild_),
         baseVertex(baseRoot.baseVertex),
         baseVertexMatch(baseRoot.baseVertexMatch),
@@ -221,12 +189,31 @@ namespace matching
     {
       initializeFromChildren(rootBlossoms, graph);
     }
+
+    template <typename edge_weight>
+    inline void RootBlossom<edge_weight>::updateRootBlossomInDescendants(
+      RootBlossom<edge_weight> &newRootBlossom
+    ) &
+    {
+      for (
+        auto vertexIterator = rootChild.vertexListHead;
+        vertexIterator;
+        vertexIterator = vertexIterator->nextVertex)
+      {
+        vertexIterator->rootBlossom = &newRootBlossom;
+        ParentBlossom<edge_weight> *parentBlossom =
+          vertexIterator->parentBlossom;
+        while (
+          parentBlossom && parentBlossom->vertexListTail == vertexIterator)
+        {
+          parentBlossom->rootBlossom = &newRootBlossom;
+          parentBlossom = parentBlossom->parentBlossom;
+        }
+      }
+    }
   }
 }
 
-#include "blossomiteratorimpl.h"
-#include "blossommatchingiteratorimpl.h"
-#include "blossomvertexiteratorimpl.h"
 #include "parentblossomimpl.h"
 
 #endif

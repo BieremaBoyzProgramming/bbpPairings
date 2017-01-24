@@ -306,18 +306,20 @@ namespace fileformats
             }
             matches.insert(matches.end(), skippedRounds, tournament::Match(id));
             skippedRounds = 0;
-            tournament.playedRounds =
-              std::max(tournament.playedRounds, matches.size());
+            if (matches.size() > tournament.playedRounds)
+            {
+              tournament.playedRounds = matches.size();
+            }
             matches.emplace_back(
               opponent,
               color,
               matchScore,
               gameWasPlayed,
               participatedInPairing);
-            if (participatedInPairing)
+            if (
+              participatedInPairing && matches.size() > tournament.playedRounds)
             {
-              tournament.playedRounds =
-                std::max(tournament.playedRounds, matches.size());
+              tournament.playedRounds = matches.size();
             }
             if (matches.size() - 1u > tournament.playedRounds)
             {
@@ -421,24 +423,45 @@ namespace fileformats
       }
 
       /**
+       * Read a line containing a point value, throwing an InvalidLineException
+       * if it is improperly formatted.
+       */
+      tournament::points readPoints(const std::u32string &line)
+      {
+        if (line.length() < 8)
+        {
+          throw InvalidLineException();
+        }
+        return readScore(line.substr(4, 8));
+      }
+
+      /**
        * Finalize the number of played rounds in the tournament, and add empty
        * games to the end of the list of matches for each player who doesn't
        * have enough.
+       *
+       * If includesUnpairedRound is true, then the records in the last column
+       * will be considered byes for the next round, if that makes sense. In all
+       * other cases, all notated matches are considered past matches.
        */
-      void evenUpMatchHistories(tournament::Tournament &tournament)
+      void evenUpMatchHistories(
+        tournament::Tournament &tournament,
+        const bool includesUnpairedRound)
       {
-        bool forwardRoundIsComplete = true;
+        bool forwardRoundIsComplete = includesUnpairedRound;
         for (const tournament::Player &player : tournament.players)
         {
           if (player.isValid)
           {
-            if (player.matches.size() <= tournament.playedRounds)
+            if (
+              includesUnpairedRound
+                ^ (player.matches.size() > tournament.playedRounds))
             {
-              forwardRoundIsComplete = false;
+              forwardRoundIsComplete = !includesUnpairedRound;
             }
           }
         }
-        if (forwardRoundIsComplete)
+        if (tournament.playersByRank.size() && forwardRoundIsComplete)
         {
           ++tournament.playedRounds;
         }
@@ -579,14 +602,24 @@ namespace fileformats
 
       /**
        * Check that the score in the TRF matches the score computed by counting
-       * the number of wins and draws for that player.
+       * the number of wins and draws for that player and (optionally) adding
+       * the acceleration. Also check that there are not more accelerated rounds
+       * than tournament rounds.
        */
-      void validateScores(const tournament::Tournament &tournament)
+      void validateScores(tournament::Tournament &tournament)
       {
-        for (const tournament::Player &player : tournament.players)
+        for (tournament::Player &player : tournament.players)
         {
           if (player.isValid)
           {
+            if (player.accelerations.size() > tournament.expectedRounds)
+            {
+              throw FileFormatException(
+                "Player "
+                  + utility::uintstringconversion::toString(player.id + 1u)
+                  + " has more acceleration entries than the total number of "
+                    "rounds in the tournament.");
+            }
             tournament::points points{ };
             tournament::round_index matchIndex{ };
             for (const tournament::Match &match : player.matches)
@@ -595,13 +628,8 @@ namespace fileformats
               {
                 break;
               }
-              points += tournament.getPoints(match.matchScore);
-              if (
-                points < tournament.getPoints(match.matchScore)
-                  || (player.accelerations.size() > matchIndex
-                        && tournament::maxPoints
-                              - player.accelerations[matchIndex]
-                            < points))
+              points += tournament.getPoints(player, match);
+              if (points < tournament.getPoints(player, match))
               {
                 throw tournament::BuildLimitExceededException(
                   "This build only supports scores up to "
@@ -612,6 +640,12 @@ namespace fileformats
               ++matchIndex;
             }
 
+            if (
+              player.scoreWithoutAcceleration != points
+                && player.scoreWithoutAcceleration >= player.acceleration())
+            {
+              player.scoreWithoutAcceleration -= player.acceleration();
+            }
             if (player.scoreWithoutAcceleration != points)
             {
               throw FileFormatException(
@@ -709,6 +743,9 @@ namespace fileformats
     /**
      * Read a TRF(x) file, and return a Tournament containing the parsed data.
      * If data is not 0, store the file contents there.
+     * If includesUnpairedRound is true, then we are being asked to pair the
+     * next round, so we should look for future-round byes and require that the
+     * total number of rounds in the tournament be specified.
      *
      * @throws FileFormatException if we detect that the file is not formatted
      * properly or contains inconsistent data.
@@ -717,10 +754,14 @@ namespace fileformats
      * @throws FileReaderException on other exceptional conditions, such as an
      * unreadable file.
      */
-    tournament::Tournament readFile(std::istream &stream, FileData *const data)
+    tournament::Tournament readFile(
+      std::istream &stream,
+      const bool includesUnpairedRound,
+      FileData *const data)
     {
       tournament::Tournament result;
       bool useRank{ };
+      bool usePairingAllocatedByeScore{ };
       std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert;
       std::string buffer;
       while (stream.good())
@@ -825,19 +866,32 @@ namespace fileformats
               }
               else if (prefix == U"BBW")
               {
-                if (line.length() < 8)
+                result.pointsForWin = readPoints(line);
+                if (!usePairingAllocatedByeScore)
                 {
-                  throw InvalidLineException();
+                  result.pointsForPairingAllocatedBye = result.pointsForWin;
                 }
-                result.pointsForWin = readScore(line.substr(4, 8));
               }
               else if (prefix == U"BBD")
               {
-                if (line.length() < 8)
-                {
-                  throw InvalidLineException();
-                }
-                result.pointsForDraw = readScore(line.substr(4, 8));
+                result.pointsForDraw = readPoints(line);
+              }
+              else if (prefix == U"BBL")
+              {
+                result.pointsForLoss = readPoints(line);
+              }
+              else if (prefix == U"BBZ")
+              {
+                result.pointsForZeroPointBye = readPoints(line);
+              }
+              else if (prefix == U"BBF")
+              {
+                result.pointsForForfeitLoss = readPoints(line);
+              }
+              else if (prefix == U"BBU")
+              {
+                result.pointsForPairingAllocatedBye = readPoints(line);
+                usePairingAllocatedByeScore = true;
               }
             }
             catch (const InvalidLineException &exception)
@@ -859,11 +913,23 @@ namespace fileformats
         throw FileFormatException("A pairing number is missing.");
       }
 
-      evenUpMatchHistories(result);
-      if (result.expectedRounds && result.playedRounds > result.expectedRounds)
+      evenUpMatchHistories(result, includesUnpairedRound);
+      if (
+        result.expectedRounds
+          && result.playedRounds > result.expectedRounds - includesUnpairedRound
+      )
       {
         throw FileFormatException(
           "The number of rounds is larger than the reported number of rounds.");
+      }
+      else if (includesUnpairedRound && !result.expectedRounds)
+      {
+        throw FileFormatException(
+          "The total number of rounds in the tournament must be specified.");
+      }
+      else if (!result.expectedRounds)
+      {
+        result.expectedRounds = result.playedRounds;
       }
       computePlayerIndexes(result, useRank);
       if (result.initialColor == tournament::COLOR_NONE)
@@ -887,6 +953,13 @@ namespace fileformats
       const std::vector<tournament::player_index> ranks =
         computeRanks(tournament);
       outputStream << std::setfill(' ') << std::right;
+      if (tournament.playedRounds < tournament.expectedRounds)
+      {
+        outputStream
+          << "XXR "
+          << utility::uintstringconversion::toString(tournament.expectedRounds)
+          << '\r';
+      }
       for (const tournament::Player &player : tournament.players)
       {
         if (player.id > 9999u)
@@ -912,21 +985,72 @@ namespace fileformats
       }
       outputStream << '\r';
 
-      if (tournament.pointsForWin != 10u || tournament.pointsForDraw != 5u)
+      if (
+        tournament.pointsForWin != 10u
+          || tournament.pointsForDraw != 5u
+          || tournament.pointsForLoss != 0u
+          || tournament.pointsForZeroPointBye != 0u
+          || tournament.pointsForForfeitLoss != 0u
+          || tournament.pointsForPairingAllocatedBye != 10u)
       {
-        if (tournament.pointsForWin > 999u || tournament.pointsForDraw > 999u)
+        if (
+          tournament.pointsForWin > 999u
+            || tournament.pointsForDraw > 999u
+            || tournament.pointsForLoss > 999u
+            || tournament.pointsForZeroPointBye > 999u
+            || tournament.pointsForForfeitLoss > 999u
+            || tournament.pointsForPairingAllocatedBye > 999u)
         {
           throw LimitExceededException(
             "The output file format does not support scores above 99.9.");
         }
-        outputStream << "BBW "
-          << std::setw(4)
-          << utility::uintstringconversion::toString(tournament.pointsForWin, 1)
-          << "\rBBD "
-          << std::setw(4)
-          << utility::uintstringconversion
-              ::toString(tournament.pointsForDraw, 1)
-          << "\r\r";
+        if (
+          tournament.pointsForWin != 10u
+            || tournament.pointsForDraw != 5u
+            || tournament.pointsForLoss != 0u
+            || tournament.pointsForZeroPointBye != 0u
+            || tournament.pointsForForfeitLoss != 0u)
+        {
+          outputStream << "BBW "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForWin, 1)
+            << "\rBBD "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForDraw, 1)
+            << "\r";
+        }
+        if (
+          tournament.pointsForLoss != 0u
+            || tournament.pointsForZeroPointBye != 0u
+            || tournament.pointsForForfeitLoss != 0u)
+        {
+          outputStream
+            << "BBL "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForLoss, 1)
+            << "\rBBZ "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForZeroPointBye, 1)
+            << "\rBBF "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForForfeitLoss, 1)
+            << "\r";
+        }
+        if (tournament.pointsForWin != tournament.pointsForPairingAllocatedBye)
+        {
+          outputStream
+            << "BBU "
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForPairingAllocatedBye, 1)
+            << "\r";
+        }
+        outputStream << "\r";
       }
 
       for (const tournament::Player &player : tournament.players)
@@ -980,12 +1104,23 @@ namespace fileformats
         );
       }
 
+      bool roundsLine;
       for (const std::u32string &line : modelFileData.lines)
       {
+        if (line.length() >= 3 && line.substr(0, 3) == U"XXR")
+        {
+          roundsLine = true;
+        }
         if (line.length() < 3 || line.substr(0, 3) != U"012")
         {
           outputStream << convert.to_bytes(line) << '\r';
         }
+      }
+      if (!roundsLine)
+      {
+        outputStream << "XXR "
+          << utility::uintstringconversion::toString(tournament.expectedRounds)
+          << '\r';
       }
     }
   }

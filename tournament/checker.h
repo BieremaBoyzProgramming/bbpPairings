@@ -26,6 +26,7 @@
 
 #include "tournament.h"
 
+#ifndef OMIT_CHECKER
 namespace tournament
 {
   namespace checker
@@ -37,5 +38,6 @@ namespace tournament
       const std::string &);
   }
 }
+#endif
 
 #endif

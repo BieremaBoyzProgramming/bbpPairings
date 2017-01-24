@@ -17,12 +17,11 @@
 
 
 #include <deque>
-#include <memory>
 
 #include "../templateinstantiation.h"
 
-#include "blossomsig.h"
-#include "parentblossomimpl.h"
+#include "blossomimpl.h"
+#include "parentblossomsig.h"
 #include "vertexsig.h"
 
 namespace matching
@@ -38,8 +37,6 @@ namespace matching
       const typename std::deque<Vertex<edge_weight> *>::const_iterator pathEnd
     ) &
     {
-      const std::shared_ptr<ParentBlossom<edge_weight>> pointer(this);
-
       Blossom<edge_weight> *previousChild =
         &getAncestorOfVertex<edge_weight>(**pathIterator, nullptr);
       for (
@@ -54,12 +51,12 @@ namespace matching
         previousChild->nextBlossom = subblossom;
         subblossom->vertexToPreviousSiblingBlossom =
           *pathIterator;
-        subblossom->parentBlossom = pointer;
+        subblossom->parentBlossom = this;
         subblossom->previousBlossom = previousChild;
         previousChild = subblossom;
       }
     }
-
-    MATCHINGEDGEWEIGHTPARAMETERS1(template struct ParentBlossom<, >;)
+#define PARENT_BLOSSOM_INSTANTIATION(a) template struct ParentBlossom<a>;
+    INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(PARENT_BLOSSOM_INSTANTIATION)
   }
 }

@@ -60,20 +60,57 @@ namespace
   /**
    * Print the build info to the ostream.
    */
-  void printProgramInfo(std::ostream &ostream, bool checkFilesystem = true)
+  void printProgramInfo(std::ostream &ostream, bool checkComponents = true)
   {
+#ifdef OMIT_BURSTEIN
+#define CUSTOM_BUILD
+#endif
+#ifdef OMIT_DUTCH
+#define CUSTOM_BUILD
+#endif
+#ifdef OMIT_GENERATOR
+#define CUSTOM_BUILD
+#endif
+#ifdef OMIT_CHECKER
+#define CUSTOM_BUILD
+#endif
+#ifdef MAX_PLAYERS
+#define CUSTOM_BUILD
+#endif
+#ifdef MAX_POINTS
+#define CUSTOM_BUILD
+#endif
+#ifdef MAX_RATING
+#define CUSTOM_BUILD
+#endif
+#ifdef MAX_ROUNDS
+#define CUSTOM_BUILD
+#endif
     ostream
       << "BBP Pairings (https://github.com/BieremaBoyzProgramming/bbpPairings) "
           "- "
-      << STRINGIFY_MACRO(VERSION_INFO)
-      << " (Built "
-#ifndef FILESYSTEM_NS
-      << (checkFilesystem ? "without file path manipulation, " : "")
+          STRINGIFY_MACRO(VERSION_INFO)
+          " (Built "
+      << (checkComponents
+            ? ""
+#ifdef CUSTOM_BUILD
+              "with customized settings"
 #endif
+#ifndef FILESYSTEM_NS
+#ifdef CUSTOM_BUILD
+              " and "
+#endif
+              "without file path manipulation, "
+#else
+#ifdef CUSTOM_BUILD
+              ", "
+#endif
+#endif
+            : "")
       << __DATE__
-      << ' '
-      << __TIME__
-      << ')';
+          " "
+          __TIME__
+          ")";
   }
 
   void relativizePath(std::string &filename, const std::string &pathBase)
@@ -171,14 +208,21 @@ int main(const int argc, char**const argv)
     // Check which optional arguments are present and whether the args conform
     // to one of the accepted patterns.
     const bool printInfo = argc <= 1 || argv[1] == std::string("-r");
+    const std::string swissSystemString(
+      argc <= 1 + printInfo ? "" : argv[1u + printInfo]);
     const swisssystems::SwissSystem swissSystem =
       argc <= 1 + printInfo ? swisssystems::NONE
-        : argv[1u + printInfo] == std::string("--burstein")
-          ? swisssystems::BURSTEIN
+#ifndef OMIT_DUTCH
+        : swissSystemString == "--dutch" ? swisssystems::DUTCH
+#endif
+#ifndef OMIT_BURSTEIN
+        : swissSystemString == "--burstein" ? swisssystems::BURSTEIN
+#endif
         : swisssystems::NONE;
     int processedArgCount = 2 + printInfo;
 
     const char *inputFilename;
+#ifndef OMIT_CHECKER
     const bool checkPairings =
       argc >= 2 + processedArgCount
         && argv[1u + processedArgCount] == std::string("-c");
@@ -187,6 +231,7 @@ int main(const int argc, char**const argv)
       inputFilename = argv[processedArgCount];
       processedArgCount += 2;
     }
+#endif
 
     std::string outputFilename;
     const bool pairingsOutputFile =
@@ -206,6 +251,7 @@ int main(const int argc, char**const argv)
       }
     }
 
+#ifndef OMIT_GENERATOR
     const char *seedString;
     const bool modelFile =
       argc >= 1 + processedArgCount
@@ -246,6 +292,7 @@ int main(const int argc, char**const argv)
         ++processedArgCount;
       }
     }
+#endif
 
     const bool checklist =
 #ifdef FILESYSTEM_NS
@@ -269,15 +316,36 @@ int main(const int argc, char**const argv)
     if (
       argc > 1 + printInfo
         && (swissSystem == swisssystems::NONE
-              || (unsigned int)checkPairings
-                    + doPairings
+              || (unsigned int)doPairings
+#ifndef OMIT_CHECKER
+                    + checkPairings
+#endif
+#ifndef OMIT_GENERATOR
                     + generateTournament
+#endif
                   != 1
               || processedArgCount != argc))
     {
       // Invalid command.
 
       printProgramInfo(std::cerr);
+      const char*const swissSystemSyntax =
+#ifndef OMIT_DUTCH
+#ifndef OMIT_BURSTEIN
+        "("
+#endif
+        "--dutch"
+#endif
+#ifndef OMIT_BURSTEIN
+#ifndef OMIT_DUTCH
+        " | "
+#endif
+        "--burstein"
+#ifndef OMIT_DUTCH
+        ")"
+#endif
+#endif
+        ;
       const char*const checklistString =
 #ifdef FILESYSTEM_NS
         "[-l [check-list-file]]";
@@ -291,19 +359,29 @@ int main(const int argc, char**const argv)
         << argv[0]
         << " [-r]"
         << std::endl
+#ifndef OMIT_CHECKER
         << argv[0]
-        << " [-r] --burstein input-file -c "
+        << " [-r] "
+        << swissSystemSyntax
+        << " input-file -c "
         << checklistString
         << std::endl
+#endif
         << argv[0]
-        << " [-r] --burstein input-file -p [output-file] "
+        << " [-r] "
+        << swissSystemSyntax
+        << " input-file -p [output-file] "
         << checklistString
         << std::endl
+#ifndef OMIT_GENERATOR
         << argv[0]
-        << " [-r] --burstein (model-file -g | -g [config-file]) -o trf_file "
-            "[-s random_seed] "
+        << " [-r] "
+        << swissSystemSyntax
+        << " (model-file -g | -g [config-file]) -o trf_file [-s random_seed] "
         << checklistString
-        << std::endl;
+        << std::endl
+#endif
+        ;
       return INVALID_REQUEST;
     }
     if (printInfo)
@@ -312,6 +390,7 @@ int main(const int argc, char**const argv)
       printProgramInfo(std::cout);
       std::cout << std::endl;
     }
+#ifndef OMIT_CHECKER
     if (checkPairings)
     {
       // Input a tournament and check that the pairings are correct.
@@ -323,7 +402,7 @@ int main(const int argc, char**const argv)
         tournament::Tournament tournament;
         try
         {
-          tournament = fileformats::trf::readFile(inputStream);
+          tournament = fileformats::trf::readFile(inputStream, false);
         }
         catch (const fileformats::FileFormatException &exception)
         {
@@ -342,11 +421,6 @@ int main(const int argc, char**const argv)
             << exception.what()
             << std::endl;
           return FILE_ERROR;
-        }
-
-        if (!tournament.expectedRounds)
-        {
-          tournament.expectedRounds = tournament.playedRounds;
         }
 
         std::unique_ptr<std::ofstream> checklistStream;
@@ -414,7 +488,8 @@ int main(const int argc, char**const argv)
         return LIMIT_EXCEEDED;
       }
     }
-    else if (doPairings)
+#endif
+    if (doPairings)
     {
       // Input a tournament file, and compute the pairings of the next round.
       try
@@ -425,7 +500,7 @@ int main(const int argc, char**const argv)
         tournament::Tournament tournament;
         try
         {
-          tournament = fileformats::trf::readFile(inputStream);
+          tournament = fileformats::trf::readFile(inputStream, true);
         }
         catch (const fileformats::FileFormatException &exception)
         {
@@ -447,7 +522,7 @@ int main(const int argc, char**const argv)
         }
         if (tournament.initialColor == tournament::COLOR_NONE)
         {
-          std::cerr << "Error while pairing "
+          std::cerr << "Error while parsing "
             << inputFilename
             << ": Please configure the initial piece colors."
             << std::endl;
@@ -530,6 +605,8 @@ int main(const int argc, char**const argv)
 
         closeChecklist(checklistStream.get(), checklistFilename);
 
+        swisssystems::sortResults(pairs, tournament);
+
         // Output the pairs.
         *outputStream << pairs.size() << std::endl;
         for (const swisssystems::Pairing &pair : pairs)
@@ -583,6 +660,7 @@ int main(const int argc, char**const argv)
         return LIMIT_EXCEEDED;
       }
     }
+#ifndef OMIT_GENERATOR
     else if (generateTournament)
     {
       // Generate a random tournament from configuration options or a model
@@ -652,7 +730,8 @@ int main(const int argc, char**const argv)
             tournament::Tournament tournament;
             try
             {
-              tournament = fileformats::trf::readFile(inputStream, &fileData);
+              tournament =
+                fileformats::trf::readFile(inputStream, false, &fileData);
             }
             catch (const fileformats::FileFormatException &exception)
             {
@@ -684,11 +763,6 @@ int main(const int argc, char**const argv)
                   << std::endl;
                 return INVALID_REQUEST;
               }
-            }
-
-            if (!tournament.expectedRounds)
-            {
-              tournament.expectedRounds = tournament.playedRounds;
             }
 
             // Compute the configuration options for generating the matches.
@@ -932,6 +1006,7 @@ int main(const int argc, char**const argv)
         return LIMIT_EXCEEDED;
       }
     }
+#endif
 
     return 0;
   }

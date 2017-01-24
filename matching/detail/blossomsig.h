@@ -19,8 +19,6 @@
 #ifndef BLOSSOMSIG_H
 #define BLOSSOMSIG_H
 
-#include <memory>
-
 namespace matching
 {
   namespace detail
@@ -38,8 +36,17 @@ namespace matching
     template <typename edge_weight>
     struct Blossom
     {
-      std::shared_ptr<RootBlossom<edge_weight>> rootBlossom;
-      std::shared_ptr<ParentBlossom<edge_weight>> parentBlossom;
+      RootBlossom<edge_weight> *rootBlossom;
+      ParentBlossom<edge_weight> *parentBlossom{ };
+      /**
+       * The head of a linked list of the vertices contained in this blossom.
+       * The nextVertex field of Vertex forms the links.
+       */
+      Vertex<edge_weight> *vertexListHead;
+      /**
+       * The tail of the linked list of the vertices contained in this blossom.
+       */
+      Vertex<edge_weight> *vertexListTail;
       /**
        * The vertex in this subblossom which was used to link this subblossom to
        * the next child subblossom of their mutual parent (sub)blossom. If this
@@ -64,9 +71,12 @@ namespace matching
       Blossom<edge_weight> *previousBlossom;
       const bool isVertex;
 
-      Blossom(Blossom<edge_weight> &) = delete;
-      Blossom(Blossom<edge_weight> &&) = delete;
-      Blossom(RootBlossom<edge_weight> &, bool isVertex);
+      Blossom(Blossom<edge_weight> &&) noexcept;
+      Blossom(
+        RootBlossom<edge_weight> &,
+        Vertex<edge_weight> &,
+        Vertex<edge_weight> &,
+        bool isVertex);
 
       virtual ~Blossom() = 0;
     };

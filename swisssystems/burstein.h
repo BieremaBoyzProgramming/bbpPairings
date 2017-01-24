@@ -29,6 +29,7 @@
 
 #include "common.h"
 
+#ifndef OMIT_BURSTEIN
 namespace swisssystems
 {
   namespace burstein
@@ -36,7 +37,7 @@ namespace swisssystems
     namespace detail
     {
       constexpr std::uintmax_t preferenceSize =
-        tournament::maxPlayers;
+        tournament::maxPlayers - (tournament::maxPlayers & 1u);
       constexpr std::uintmax_t colorCountSize =
         tournament::maxPlayers / 2u + 1u;
       constexpr std::uintmax_t sameScoreGroupSize =
@@ -65,10 +66,6 @@ namespace swisssystems
     typedef
       matching::computer_supporting_value<maxEdgeWeight>::type
       matching_computer;
-    static_assert(
-      matching_computer::maxVertexIndex
-        >= tournament::maxPlayers / 2u * 2u - 1u,
-      "Overfill");
 
     namespace detail
     {
@@ -97,5 +94,6 @@ namespace swisssystems
     };
   }
 }
+#endif
 
 #endif

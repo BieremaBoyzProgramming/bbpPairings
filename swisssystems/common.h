@@ -32,7 +32,13 @@ namespace swisssystems
 {
   enum SwissSystem
   {
-    BURSTEIN, NONE
+#ifndef OMIT_DUTCH
+    DUTCH,
+#endif
+#ifndef OMIT_BURSTEIN
+    BURSTEIN,
+#endif
+    NONE
   };
 
   /**
@@ -122,11 +128,32 @@ namespace swisssystems
         || preference1 == tournament::COLOR_NONE;
   }
 
+  /**
+   * Check whether the player is eligible for the bye under the normal
+   * restrictions imposed on all Swiss systems.
+   */
+  inline bool eligibleForBye(
+    const tournament::Player &player,
+    const tournament::Tournament &tournament)
+  {
+    for (const tournament::Match &match : player.matches)
+    {
+      if (!match.gameWasPlayed && tournament.getPoints(player, match))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void findFirstColorDifference(
     const tournament::Player &,
     const tournament::Player &,
     tournament::Color &,
     tournament::Color &);
+  tournament::Color choosePlayerNeutralColor(
+    const tournament::Player &,
+    const tournament::Player &);
 
   void sortResults(std::list<Pairing> &, const tournament::Tournament &);
 
@@ -136,6 +163,45 @@ namespace swisssystems
     const std::function<std::deque<std::string>(const tournament::Player &)> &,
     const tournament::Tournament &,
     const std::list<const tournament::Player *> &);
+
+  /**
+   * Set the weight of the edge between the two vertices to defaultEdgeWeight,
+   * and set edge weights of all other edges incident on these vertices to 0.
+   */
+  template <class MatchingComputer>
+  void finalizePair(
+    const typename MatchingComputer::vertex_index vertexIndex0,
+    const typename MatchingComputer::vertex_index vertexIndex1,
+    MatchingComputer &matchingComputer,
+    typename MatchingComputer::edge_weight defaultEdgeWeight = 1)
+  {
+    for (
+      decltype(matchingComputer.size()) unpairedVertexIndex{ };
+      unpairedVertexIndex < matchingComputer.size();
+      ++unpairedVertexIndex)
+    {
+      if (vertexIndex0 != unpairedVertexIndex)
+      {
+        matchingComputer.setEdgeWeight(
+          vertexIndex0,
+          unpairedVertexIndex,
+          unpairedVertexIndex == vertexIndex1
+            ? defaultEdgeWeight
+            : defaultEdgeWeight & 0u
+        );
+      }
+      if (vertexIndex1 != unpairedVertexIndex)
+      {
+        matchingComputer.setEdgeWeight(
+          vertexIndex1,
+          unpairedVertexIndex,
+          unpairedVertexIndex == vertexIndex0
+            ? defaultEdgeWeight
+            : defaultEdgeWeight & 0u
+        );
+      }
+    }
+  }
 }
 
 #endif

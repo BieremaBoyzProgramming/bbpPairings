@@ -39,19 +39,17 @@ namespace matching
     class ParentBlossom final : public Blossom<edge_weight>
     {
     public:
-      edge_weight dualVariable{ };
+      edge_weight dualVariable;
       /**
-       * Any of the subblossoms (although if RootBlossom::useMatchingIterators()
-       * is called, subblossom is the subblossom containing the subblossom's
-       * base.
+       * Any of the subblossoms (although if
+       * RootBlossom::putVerticesInMatchingOrder() is called, subblossom is the
+       * subblossom containing the subblossom's base.
        */
       Blossom<edge_weight> *subblossom;
       /**
-       * Indicates whether iteration using BlossomMatchingIterator should begin
-       * with the subblossom pointed to by subblossom.
-       * RootBlossom::useMatchingIterators() sets this so that
-       * BlossomMatchingIterator returns vertices in a matching-consecutive
-       * order.
+       * Used by RootBlossom::putVerticesInMatchingOrder() to remember whether
+       * matching order iteration begins with the subblossom pointed to by
+       * subblossom.
        */
       bool iterationStartsWithSubblossom{ };
 
