@@ -217,25 +217,7 @@ namespace tournament
       const Tournament &tournament,
       decltype(matches)::size_type roundsBack = 0
     ) const;
-    points acceleration() const
-    {
-      return
-        matches.size() >= accelerations.size()
-          ? 0u
-          : accelerations[matches.size()];
-    }
-    points scoreWithAcceleration() const
-    {
-      const points result = scoreWithoutAcceleration + acceleration();
-      if (result < scoreWithoutAcceleration)
-      {
-        throw BuildLimitExceededException(
-          "This build does not support accelerated scores above "
-            + utility::uintstringconversion::toString(maxPoints, 1)
-            + '.');
-      }
-      return result;
-    }
+    points acceleration(const Tournament &) const;
   };
 
   /**
@@ -256,11 +238,16 @@ namespace tournament
    */
   inline bool acceleratedScoreRankCompare(
     const Player *const player0,
-    const Player *const player1)
+    const Player *const player1,
+    const Tournament &tournament)
   {
     return
-      std::make_tuple(player0->scoreWithAcceleration(), player1->rankIndex)
-        < std::make_tuple(player1->scoreWithAcceleration(), player0->rankIndex);
+      std::make_tuple(
+          player0->scoreWithAcceleration(tournament),
+          player1->rankIndex)
+        < std::make_tuple(
+            player1->scoreWithAcceleration(tournament),
+            player0->rankIndex);
   }
 
   typedef
@@ -357,6 +344,14 @@ namespace tournament
           + '.');
     }
     return result;
+  }
+
+  inline points Player::acceleration(const Tournament &tournament) const
+  {
+    return
+      tournament.playedRounds >= accelerations.size()
+        ? 0u
+        : accelerations[tournament.playedRounds];
   }
 
 

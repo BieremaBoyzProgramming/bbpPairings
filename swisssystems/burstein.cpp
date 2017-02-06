@@ -146,7 +146,7 @@ namespace swisssystems
           adjusted_score(tournament.playedRounds - 1u)
             * tournament.pointsForDraw;
         adjusted_score virtualPoints =
-          futureVirtualPoints + player.acceleration();
+          futureVirtualPoints + player.acceleration(tournament);
         if (
           virtualPoints < futureVirtualPoints
             || (tournament.playedRounds > 1u
@@ -287,7 +287,7 @@ namespace swisssystems
           adjusted_score(tournament.playedRounds - 1u)
             * tournament.pointsForDraw;
         adjusted_score virtualPoints =
-          futureVirtualPoints + player.acceleration();
+          futureVirtualPoints + player.acceleration(tournament);
         if (
           virtualPoints < futureVirtualPoints
             || (tournament.playedRounds > 1u
@@ -428,7 +428,7 @@ namespace swisssystems
             const tournament::Player &player,
             const tournament::Tournament &tournament,
             const std::vector<adjusted_score> &adjustedScores)
-          : playerScore(player.scoreWithAcceleration()),
+          : playerScore(player.scoreWithAcceleration(tournament)),
             sonnebornBerger(
               calculateSonnebornBerger(player, tournament, adjustedScores)),
             buchholzTiebreak(
@@ -715,7 +715,7 @@ namespace swisssystems
           {
             sortedPlayers.push_back(&player);
           }
-          adjustedScore = player.acceleration();
+          adjustedScore = player.acceleration(tournament);
           tournament::round_index matchIndex{ };
           for (const tournament::Match &match : player.matches)
           {
@@ -748,16 +748,16 @@ namespace swisssystems
         metricScores.emplace_back(player, tournament, adjustedScores);
       }
       sortedPlayers.sort(
-        [&metricScores](
+        [&metricScores,&tournament](
           const tournament::Player *const player0,
           const tournament::Player *const player1)
         {
           return
             std::make_tuple(
-              player1->scoreWithAcceleration(),
+              player1->scoreWithAcceleration(tournament),
               metricScores[player1->id]
             ) < std::make_tuple(
-                  player0->scoreWithAcceleration(),
+                  player0->scoreWithAcceleration(tournament),
                   metricScores[player0->id]);
         }
       );
@@ -866,8 +866,10 @@ namespace swisssystems
             ++scoreGroups.back();
           } while (
             scoreGroups.back() < vertexLabels.size()
-              && vertexLabels[scoreGroupBegin]->scoreWithAcceleration()
-                  == vertexLabels[scoreGroups.back()]->scoreWithAcceleration()
+              && vertexLabels[scoreGroupBegin]
+                    ->scoreWithAcceleration(tournament)
+                  == vertexLabels[scoreGroups.back()]
+                      ->scoreWithAcceleration(tournament)
           );
           // Create a virtual opponent for players in the current scoregroup
           // to ensure that no player in higher scoregroup remains unpaired.

@@ -20,7 +20,7 @@
 #include <codecvt>
 #include <deque>
 #include <iomanip>
-#include <istream>
+#include <iostream>
 #include <limits>
 #include <list>
 #include <locale>
@@ -640,11 +640,43 @@ namespace fileformats
               ++matchIndex;
             }
 
-            if (
-              player.scoreWithoutAcceleration != points
-                && player.scoreWithoutAcceleration >= player.acceleration())
+            if (player.scoreWithoutAcceleration != points)
             {
-              player.scoreWithoutAcceleration -= player.acceleration();
+              if (
+                player.scoreWithoutAcceleration
+                  >= player.acceleration(tournament))
+              {
+                player.scoreWithoutAcceleration
+                  -= player.acceleration(tournament);
+              }
+              if (player.scoreWithoutAcceleration != points)
+              {
+                player.scoreWithoutAcceleration
+                  += player.acceleration(tournament);
+              }
+            }
+            if (player.scoreWithoutAcceleration != points)
+            {
+              if (player.matches.size() > tournament.playedRounds)
+              {
+                tournament::points nextRoundPoints =
+                  tournament
+                    .getPoints(player, player.matches[tournament.playedRounds]);
+                if (player.scoreWithoutAcceleration >= nextRoundPoints)
+                {
+                  player.scoreWithoutAcceleration -= nextRoundPoints;
+                }
+              }
+            }
+            if (player.scoreWithoutAcceleration != points)
+            {
+              if (
+                player.scoreWithoutAcceleration
+                  >= player.acceleration(tournament))
+              {
+                player.scoreWithoutAcceleration
+                  -= player.acceleration(tournament);
+              }
             }
             if (player.scoreWithoutAcceleration != points)
             {
