@@ -96,8 +96,9 @@ namespace swisssystems
                   || !player1.absoluteColorPreference()
                   || player0.colorPreference != player1.colorPreference
                   || (tournament.playedRounds >= tournament.expectedRounds - 1u
-                        && (player0.scoreWithAcceleration() > topScoreThreshold
-                              || player1.scoreWithAcceleration()
+                        && (player0.scoreWithAcceleration(tournament)
+                                > topScoreThreshold
+                              || player1.scoreWithAcceleration(tournament)
                                   > topScoreThreshold)
                       )
                 );
@@ -321,21 +322,23 @@ namespace swisssystems
             ((result & 0u) | 1u)
               << scoreDifferenceShifts.find(
                     score_difference(
-                      higherPlayer.scoreWithAcceleration() - minScoreInBracket
+                      higherPlayer.scoreWithAcceleration(tournament)
+                        - minScoreInBracket
                     ) + 10u
                   )->second;
           result +=
             ((result & 0u) | 1u)
               << scoreDifferenceShifts.find(
                     score_difference(
-                      lowerPlayer.scoreWithAcceleration() - minScoreInBracket
+                      lowerPlayer.scoreWithAcceleration(tournament)
+                        - minScoreInBracket
                     ) + 10u
                   )->second;
           result -=
             ((result & 0u) | 1u)
               << scoreDifferenceShifts.find(
-                  higherPlayer.scoreWithAcceleration()
-                    - lowerPlayer.scoreWithAcceleration())->second;
+                  higherPlayer.scoreWithAcceleration(tournament)
+                    - lowerPlayer.scoreWithAcceleration(tournament))->second;
         }
 
         if (!specialBrackets)
@@ -372,7 +375,7 @@ namespace swisssystems
                 ((result & 0u) | 1u)
                   << scoreDifferenceShifts.find(
                         score_difference(
-                          higherPlayer.scoreWithAcceleration()
+                          higherPlayer.scoreWithAcceleration(tournament)
                             - minScoreInBracket
                         ) + 10u
                       )->second;
@@ -383,7 +386,7 @@ namespace swisssystems
                 ((result & 0u) | 1u)
                   << scoreDifferenceShifts.find(
                         score_difference(
-                          lowerPlayer.scoreWithAcceleration()
+                          lowerPlayer.scoreWithAcceleration(tournament)
                             - minScoreInBracket
                         ) + 10u
                       )->second;
@@ -407,8 +410,8 @@ namespace swisssystems
           {
             result |= getFloat(lowerPlayer, 1, tournament) == FLOAT_DOWN;
             result +=
-              higherPlayer.scoreWithAcceleration()
-                  <= lowerPlayer.scoreWithAcceleration()
+              higherPlayer.scoreWithAcceleration(tournament)
+                  <= lowerPlayer.scoreWithAcceleration(tournament)
                 && getFloat(higherPlayer, 1, tournament) == FLOAT_DOWN;
           }
 
@@ -417,8 +420,8 @@ namespace swisssystems
           result -=
             !max
               && lowerPlayerInCurrentBracket
-              && higherPlayer.scoreWithAcceleration()
-                  > lowerPlayer.scoreWithAcceleration()
+              && higherPlayer.scoreWithAcceleration(tournament)
+                  > lowerPlayer.scoreWithAcceleration(tournament)
               && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP;
         }
         if (tournament.playedRounds > 1u)
@@ -429,8 +432,8 @@ namespace swisssystems
           {
             result |= getFloat(lowerPlayer, 2, tournament) == FLOAT_DOWN;
             result +=
-              higherPlayer.scoreWithAcceleration()
-                  <= lowerPlayer.scoreWithAcceleration()
+              higherPlayer.scoreWithAcceleration(tournament)
+                  <= lowerPlayer.scoreWithAcceleration(tournament)
                 && getFloat(higherPlayer, 2, tournament) == FLOAT_DOWN;
           }
 
@@ -439,8 +442,8 @@ namespace swisssystems
           result -=
             !max
               && lowerPlayerInCurrentBracket
-              && higherPlayer.scoreWithAcceleration()
-                  > lowerPlayer.scoreWithAcceleration()
+              && higherPlayer.scoreWithAcceleration(tournament)
+                  > lowerPlayer.scoreWithAcceleration(tournament)
               && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP;
         }
 
@@ -456,7 +459,8 @@ namespace swisssystems
                 | (getFloat(lowerPlayer, 1, tournament) == FLOAT_DOWN)
               ) << scoreDifferenceShifts.find(
                       score_difference(
-                        lowerPlayer.scoreWithAcceleration() - minScoreInBracket
+                        lowerPlayer.scoreWithAcceleration(tournament)
+                          - minScoreInBracket
                       ) + 10u
                     )->second;
             if (getFloat(higherPlayer, 1, tournament) == FLOAT_DOWN)
@@ -465,19 +469,19 @@ namespace swisssystems
                 ((result & 0u) | 1u)
                   << scoreDifferenceShifts.find(
                         score_difference(
-                          higherPlayer.scoreWithAcceleration()
+                          higherPlayer.scoreWithAcceleration(tournament)
                             - minScoreInBracket
                         ) + 10u
                       )->second;
               if (
-                higherPlayer.scoreWithAcceleration()
-                  > lowerPlayer.scoreWithAcceleration())
+                higherPlayer.scoreWithAcceleration(tournament)
+                  > lowerPlayer.scoreWithAcceleration(tournament))
               {
                 result -=
                   ((result & 0u) | 1u)
                     << scoreDifferenceShifts.find(
-                          higherPlayer.scoreWithAcceleration()
-                            - lowerPlayer.scoreWithAcceleration()
+                          higherPlayer.scoreWithAcceleration(tournament)
+                            - lowerPlayer.scoreWithAcceleration(tournament)
                         )->second;
               }
             }
@@ -490,14 +494,14 @@ namespace swisssystems
             !max
               && lowerPlayerInCurrentBracket
               && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP
-              && higherPlayer.scoreWithAcceleration()
-                  > lowerPlayer.scoreWithAcceleration())
+              && higherPlayer.scoreWithAcceleration(tournament)
+                  > lowerPlayer.scoreWithAcceleration(tournament))
           {
             result -=
               ((result & 0u) | 1u)
                 << scoreDifferenceShifts.find(
-                      higherPlayer.scoreWithAcceleration()
-                        - lowerPlayer.scoreWithAcceleration()
+                      higherPlayer.scoreWithAcceleration(tournament)
+                        - lowerPlayer.scoreWithAcceleration(tournament)
                     )->second;
           }
         }
@@ -513,7 +517,8 @@ namespace swisssystems
                 | (getFloat(lowerPlayer, 2, tournament) == FLOAT_DOWN)
               ) << scoreDifferenceShifts.find(
                       score_difference(
-                        lowerPlayer.scoreWithAcceleration() - minScoreInBracket
+                        lowerPlayer.scoreWithAcceleration(tournament)
+                          - minScoreInBracket
                       ) + 10u
                     )->second;
             if (getFloat(higherPlayer, 2, tournament) == FLOAT_DOWN)
@@ -522,19 +527,19 @@ namespace swisssystems
                 ((result & 0u) | 1u)
                   << scoreDifferenceShifts.find(
                         score_difference(
-                          higherPlayer.scoreWithAcceleration()
+                          higherPlayer.scoreWithAcceleration(tournament)
                             - minScoreInBracket
                         ) + 10u
                       )->second;
               if (
-                higherPlayer.scoreWithAcceleration()
-                  > lowerPlayer.scoreWithAcceleration())
+                higherPlayer.scoreWithAcceleration(tournament)
+                  > lowerPlayer.scoreWithAcceleration(tournament))
               {
                 result -=
                   ((result & 0u) | 1u)
                     << scoreDifferenceShifts.find(
-                          higherPlayer.scoreWithAcceleration()
-                            - lowerPlayer.scoreWithAcceleration()
+                          higherPlayer.scoreWithAcceleration(tournament)
+                            - lowerPlayer.scoreWithAcceleration(tournament)
                         )->second;
               }
             }
@@ -547,14 +552,14 @@ namespace swisssystems
             !max
               && lowerPlayerInCurrentBracket
               && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP
-              && higherPlayer.scoreWithAcceleration()
-                  > lowerPlayer.scoreWithAcceleration())
+              && higherPlayer.scoreWithAcceleration(tournament)
+                  > lowerPlayer.scoreWithAcceleration(tournament))
           {
             result -=
               ((result & 0u) | 1u)
                 << scoreDifferenceShifts.find(
-                      higherPlayer.scoreWithAcceleration()
-                        - lowerPlayer.scoreWithAcceleration()
+                      higherPlayer.scoreWithAcceleration(tournament)
+                        - lowerPlayer.scoreWithAcceleration(tournament)
                     )->second;
           }
         }
@@ -595,14 +600,20 @@ namespace swisssystems
         return
           result == tournament::COLOR_NONE
             ? player.colorPreference == tournament::COLOR_NONE
-                ? tournament::acceleratedScoreRankCompare(&player, &opponent)
+                ? tournament::acceleratedScoreRankCompare(
+                      &player,
+                      &opponent,
+                      tournament)
                     ? opponent.rankIndex & 1u
                         ? tournament.initialColor
                         : invert(tournament.initialColor)
                     : player.rankIndex & 1u
                         ? invert(tournament.initialColor)
                         : tournament.initialColor
-                : tournament::acceleratedScoreRankCompare(&player, &opponent)
+                : tournament::acceleratedScoreRankCompare(
+                      &player,
+                      &opponent,
+                      tournament)
                     ? invert(opponent.colorPreference)
                     : player.colorPreference
             : result;
@@ -689,7 +700,7 @@ namespace swisssystems
         // Get an upper bound on the number of occurences of each score
         // difference in the current pairing bracket.
         const tournament::points minScoreInBracket =
-          playersByIndex.back()->scoreWithAcceleration();
+          playersByIndex.back()->scoreWithAcceleration(tournament);
         std::list<score_difference> scoreDifferences;
         for (
           tournament::player_index playerIndex = 0;
@@ -699,7 +710,7 @@ namespace swisssystems
           // Include score differences for downfloaters.
           scoreDifferences.push_back(
             score_difference(
-              playersByIndex[playerIndex]->scoreWithAcceleration()
+              playersByIndex[playerIndex]->scoreWithAcceleration(tournament)
                 - minScoreInBracket
             ) + 10u
           );
@@ -716,14 +727,16 @@ namespace swisssystems
             // counted once.
             if (
               opponentIndex <= firstIndex
-                || playersByIndex[opponentIndex]->scoreWithAcceleration()
+                || playersByIndex[opponentIndex]
+                      ->scoreWithAcceleration(tournament)
                     < playersByIndex[opponentIndex - 1u]
-                        ->scoreWithAcceleration())
+                        ->scoreWithAcceleration(tournament))
             {
               scoreDifferences.push_back(
                 score_difference(
-                  playersByIndex[playerIndex]->scoreWithAcceleration()
-                    - playersByIndex[opponentIndex]->scoreWithAcceleration()));
+                  playersByIndex[playerIndex]->scoreWithAcceleration(tournament)
+                    - playersByIndex[opponentIndex]
+                        ->scoreWithAcceleration(tournament)));
             }
           }
         }
@@ -870,10 +883,12 @@ namespace swisssystems
         }
       }
       sortedPlayers.sort(
-        [](const tournament::Player *const player0,
+        [&tournament](const tournament::Player *const player0,
             const tournament::Player *const player1)
         {
-          return tournament::acceleratedScoreRankCompare(player1, player0);
+          return
+            tournament
+              ::acceleratedScoreRankCompare(player1, player0, tournament);
         }
       );
 
@@ -964,8 +979,8 @@ namespace swisssystems
         sortedPlayers.begin();
       while (
         nextScoreGroupIterator != sortedPlayers.end()
-          && (*nextScoreGroupIterator)->scoreWithAcceleration()
-              >= sortedPlayers.front()->scoreWithAcceleration())
+          && (*nextScoreGroupIterator)->scoreWithAcceleration(tournament)
+              >= sortedPlayers.front()->scoreWithAcceleration(tournament))
       {
         playersByIndex.push_back(*nextScoreGroupIterator);
         vertexIndices.push_back(vertexIndices.size());
@@ -999,8 +1014,10 @@ namespace swisssystems
         while (
           nextScoreGroupIterator != sortedPlayers.end()
             && (specialBrackets
-                  || (*nextScoreGroupIterator)->scoreWithAcceleration()
-                      >= (*scoreGroupIterator)->scoreWithAcceleration()))
+                  || (*nextScoreGroupIterator)
+                        ->scoreWithAcceleration(tournament)
+                      >= (*scoreGroupIterator)
+                          ->scoreWithAcceleration(tournament)))
         {
           playersByIndex.push_back(*nextScoreGroupIterator);
           vertexIndices.push_back(vertexIndices.back() + 1u);
@@ -1139,18 +1156,19 @@ namespace swisssystems
         {
           if (
             !playerIndex
-              || playersByIndex[playerIndex]->scoreWithAcceleration()
+              || playersByIndex[playerIndex]->scoreWithAcceleration(tournament)
                   < movedDownScoreGroup)
           {
             // Count the number of moved down players with the same score as
             // playerIndex, as well as the number of these that can be matched.
             movedDownScoreGroup =
-              playersByIndex[playerIndex]->scoreWithAcceleration();
+              playersByIndex[playerIndex]->scoreWithAcceleration(tournament);
             remainingMatchedMovedDownScoreGroupPlayers = 0;
             remainingMovedDownScoreGroupPlayers = 0;
             for (
               tournament::player_index movedDownPlayerIndex = playerIndex;
-              playersByIndex[movedDownPlayerIndex]->scoreWithAcceleration()
+              playersByIndex[movedDownPlayerIndex]
+                  ->scoreWithAcceleration(tournament)
                 >= movedDownScoreGroup;
               ++movedDownPlayerIndex)
             {

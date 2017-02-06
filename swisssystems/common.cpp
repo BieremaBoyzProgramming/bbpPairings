@@ -117,7 +117,7 @@ namespace swisssystems
       std::deque<std::string> result{
         utility::uintstringconversion::toString(player.id + 1u),
         utility::uintstringconversion
-          ::toString(player.scoreWithAcceleration(), 1),
+          ::toString(player.scoreWithAcceleration(tournament), 1),
         colorString,
         player.absoluteColorPreference() ? preferenceIsWhite ? "W " : "B "
           : player.strongColorPreference ? preferenceIsWhite ? "(W)" : "(B)"
@@ -382,8 +382,8 @@ namespace swisssystems
         ostream << std::endl;
         if (
           !previousPlayer
-            || previousPlayer->scoreWithAcceleration()
-                != player->scoreWithAcceleration())
+            || previousPlayer->scoreWithAcceleration(tournament)
+                != player->scoreWithAcceleration(tournament))
         {
           ostream << std::endl;
         }
