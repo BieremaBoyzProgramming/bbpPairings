@@ -146,7 +146,7 @@ for the pairing-allocated bye (Y if yes, N if no). The C12 and C14 columns
 indicate the floating direction of the player on the previous and
 next-to-previous rounds, respectively (U for upfloat, D for downfloat).
 
-BBP Pairing has the additional option to generate checklist files while
+BBP Pairings has the additional option to generate checklist files while
 generating or checking tournaments, not just when pairing individual rounds. In
 this case, the tables for all of the rounds are put into the same file, with
 round number indications appearing between them.
