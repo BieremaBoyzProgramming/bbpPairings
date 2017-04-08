@@ -13,7 +13,8 @@ Pairings and Program Commission. To be clear, the program is not endorsed by
 FIDE or the SPP. It is not a full tournament manager, just an engine for
 computing the pairings.
 
-The program currently implements the Burstein system and the 2017 Dutch rules.
+The program currently implements the 2017 rules for the Burstein and Dutch
+systems.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
@@ -57,8 +58,7 @@ If BBU is not specified, it defaults to the score for a win. All other
 parameters default individually to particular values (1.0, 0.5, or 0.0) if not
 specified.
 
-If the tournament uses the standard point system (as of the 2014 rules), these
-lines are not necessary.
+If the tournament uses the standard point system, these lines are not necessary.
 
 Because this requirement causes an incompatibility with the TRF(x)
 representation of non-standard point system tournaments that could be overlooked
@@ -220,7 +220,7 @@ Time complexity
 Let n denote the largest player ID in a given tournament and r the number of
 rounds already played. For simplicity, assume r is O(n).
 
-This program is believed to achieve a theoretic runtime that is O(n^3) for
+This program is believed to achieve a theoretical runtime that is O(n^3) for
 pairing a single round using the Burstein system.
 
 For the Dutch system, pairing a round is believed to take time

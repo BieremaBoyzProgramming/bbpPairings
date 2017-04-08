@@ -46,26 +46,6 @@ namespace swisssystems
     namespace
     {
       /**
-       * Determine whether the player is eligible for a bye.
-       */
-      bool eligibleForBye(
-        const tournament::Player &player,
-        const tournament::Tournament &tournament)
-      {
-        for (const tournament::Match &match : player.matches)
-        {
-          if (
-            !match.gameWasPlayed
-              && match.participatedInPairing
-              && match.matchScore == tournament::MATCH_SCORE_WIN)
-          {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      /**
        * Determine whether the two players could meet without violating absolute
        * criteria.
        */
