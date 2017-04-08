@@ -13,7 +13,8 @@ Pairings and Program Commission. To be clear, the program is not endorsed by
 FIDE or the SPP. It is not a full tournament manager, just an engine for
 computing the pairings.
 
-The program currently implements the Burstein system and the 2017 Dutch rules.
+The program currently implements the 2017 rules for the Burstein and Dutch
+systems.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
@@ -57,8 +58,7 @@ If BBU is not specified, it defaults to the score for a win. All other
 parameters default individually to particular values (1.0, 0.5, or 0.0) if not
 specified.
 
-If the tournament uses the standard point system (as of the 2014 rules), these
-lines are not necessary.
+If the tournament uses the standard point system, these lines are not necessary.
 
 Because this requirement causes an incompatibility with the TRF(x)
 representation of non-standard point system tournaments that could be overlooked
@@ -146,7 +146,7 @@ for the pairing-allocated bye (Y if yes, N if no). The C12 and C14 columns
 indicate the floating direction of the player on the previous and
 next-to-previous rounds, respectively (U for upfloat, D for downfloat).
 
-BBP Pairing has the additional option to generate checklist files while
+BBP Pairings has the additional option to generate checklist files while
 generating or checking tournaments, not just when pairing individual rounds. In
 this case, the tables for all of the rounds are put into the same file, with
 round number indications appearing between them.
@@ -220,7 +220,7 @@ Time complexity
 Let n denote the largest player ID in a given tournament and r the number of
 rounds already played. For simplicity, assume r is O(n).
 
-This program is believed to achieve a theoretic runtime that is O(n^3) for
+This program is believed to achieve a theoretical runtime that is O(n^3) for
 pairing a single round using the Burstein system.
 
 For the Dutch system, pairing a round is believed to take time
