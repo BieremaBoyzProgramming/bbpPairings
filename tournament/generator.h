@@ -52,12 +52,6 @@ namespace tournament
     public:
       tournament::Tournament tournament;
 
-      /**
-       * Indicates that an acceleration defined by the Swiss system used should
-       * be applied when generating the tournament.
-       */
-      bool automaticAcceleration{ };
-
       tournament::round_index roundsNumber;
 
       float forfeitRate;

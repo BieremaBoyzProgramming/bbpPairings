@@ -75,6 +75,11 @@ namespace tournament
 
         tournament.updateRanks();
         tournament.computePlayerData();
+        if (tournament.defaultAcceleration)
+        {
+          info.updateAccelerations(tournament, tournament.playedRounds);
+        }
+
 
         std::cout << filename
           << ": Round #"

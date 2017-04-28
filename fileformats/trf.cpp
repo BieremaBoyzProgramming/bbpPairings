@@ -377,6 +377,7 @@ namespace fileformats
         const std::u32string &line,
         tournament::Tournament &tournament)
       {
+        tournament.defaultAcceleration = false;
         const tournament::player_index playerId =
           readPlayerId(std::u32string(&line[4], &line[8]));
         if (playerId >= tournament.players.size())
@@ -1085,28 +1086,33 @@ namespace fileformats
         outputStream << "\r";
       }
 
-      for (const tournament::Player &player : tournament.players)
+      if (!tournament.defaultAcceleration)
       {
-        if (!player.accelerations.empty())
+        for (const tournament::Player &player : tournament.players)
         {
-          outputStream << "XXA "
-            << std::setfill(' ')
-            << std::right
-            << std::setw(4)
-            << utility::uintstringconversion::toString(player.id + 1u);
-          for (
-            const tournament::points playerAcceleration : player.accelerations)
+          if (!player.accelerations.empty())
           {
-            if (playerAcceleration > 999u)
+            outputStream << "XXA "
+              << std::setfill(' ')
+              << std::right
+              << std::setw(4)
+              << utility::uintstringconversion::toString(player.id + 1u);
+            for (
+              const tournament::points playerAcceleration : player.accelerations
+            )
             {
-              throw LimitExceededException(
-                "The output file format does not support scores above 99.9.");
+              if (playerAcceleration > 999u)
+              {
+                throw LimitExceededException(
+                  "The output file format does not support scores above 99.9.");
+              }
+              outputStream << std::setw(5)
+                << utility::uintstringconversion
+                    ::toString(playerAcceleration, 1);
             }
-            outputStream << std::setw(5)
-              << utility::uintstringconversion::toString(playerAcceleration, 1);
-          }
 
-          outputStream << '\r';
+            outputStream << '\r';
+          }
         }
       }
     }

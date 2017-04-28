@@ -171,21 +171,6 @@ namespace fileformats
                       ::parse<tournament::points>(propertyValue, 1);
                   usePairingAllocatedByeValue = true;
                 }
-                else if (propertyName == "Accelerated")
-                {
-                  if (propertyValue == "1")
-                  {
-                    configuration.automaticAcceleration = true;
-                  }
-                  else if (propertyValue == "0")
-                  {
-                    configuration.automaticAcceleration = false;
-                  }
-                  else
-                  {
-                    throw std::invalid_argument("");
-                  }
-                }
                 else
                 {
                   throw FileFormatException(
