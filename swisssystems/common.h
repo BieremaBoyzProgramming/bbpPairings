@@ -98,12 +98,10 @@ namespace swisssystems
      * system is specified for this Swiss system. Otherwise, throw an
      * UnsupportedFeatureException.
      */
-    virtual void updateAccelerations(tournament::Tournament &) const
-    {
-      throw UnapplicableFeatureException(
-        "The selected Swiss system does not have a default acceleration system."
-      );
-    }
+    virtual void updateAccelerations(
+      tournament::Tournament &,
+      tournament::round_index
+    ) const { }
 
   protected:
     constexpr Info() noexcept { }

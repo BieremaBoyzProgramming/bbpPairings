@@ -29,6 +29,17 @@ TRF(bx)
 BBP Pairings supports only one file format, TRF(bx), an extension of the TRF(x)
 format defined for JaVaFo.
 
+The first extension may be viewed by some as a deviation from TRF(x). In JaVaFo,
+if no acceleration values are specified using XXA codes in the TRF(x), then the
+default is that there is no acceleration. This is appropriate for the Dutch
+system, and BBP Pairings matches this behavior. However, the rules for the
+Burstein system seem to define an acceleration system to be used by default for
+the Burstein system. Thus, if there are no XXA codes in a TRF(xb) to be paired
+using the Burstein system, BBP Pairings defaults to using the acceleration
+system defined in the Burstein system rules. To override this, simply include at
+least one XXA line, perhaps with an acceleration of 0.0, since if there are any
+XXA lines, BBP Pairings will not apply the default acceleration system.
+
 JaVaFo attempts to infer the point system used for the tournament (the number of
 points for wins and for draws) from the players' scores listed in the TRF. This
 is easy to do if not all players have exactly the same ratio of wins to draws,
@@ -43,7 +54,7 @@ scores are adjusted by counting unplayed games as draws when calculating their
 opponents' tiebreak scores, the program needs to know the number of points given
 for draws and cannot infer it.
 
-For this reason, we must introduce an extension to the TRF(bx) format. The
+For this reason, we must introduce another extension to the TRF(bx) format. The
 extension uses codes BBW, BBD, BBL, BBZ, BBF, and BBU for specifying the number
 of points awarded for a win, draw, played loss, zero-point bye, forfeit loss, or
 pairing-allocated bye, respectively. The format is
@@ -107,14 +118,6 @@ The point value parameters not supported in JaVaFo 1.4 can be set using the keys
 PointsForLoss, PointsForZPB, PointsForForfeitLoss, and PointsForPAB. All of
 these have default values of 0.0, except the last, which by default is set equal
 to PointsForWin.
-
-BBP Pairings introduces a new option for generating tournaments paired using the
-Burstein system. Since the Burstein system has a specific acceleration system
-included in its rules, the "Accelerated" option instructs the generator to apply
-these rules when pairing the tournament. To turn on this option, include the
-line
-Accelerated=1
-in the configuration file.
 
 BBP Pairings allows the user to specify a random seed on the command line when
 generating a random tournament. This can simplify data exchange when testing

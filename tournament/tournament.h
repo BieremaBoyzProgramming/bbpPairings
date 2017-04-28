@@ -294,6 +294,7 @@ namespace tournament
     points pointsForForfeitLoss{ 0u };
     points pointsForPairingAllocatedBye{ 10u };
     Color initialColor = COLOR_NONE;
+    bool defaultAcceleration = true;
 
     points getPoints(const Player &player, const Match &match) const &
     {

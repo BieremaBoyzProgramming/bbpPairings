@@ -90,7 +90,8 @@ namespace swisssystems
       {
         return burstein::computeMatching(std::move(tournament), ostream);
       }
-      void updateAccelerations(tournament::Tournament &) const override;
+      void updateAccelerations(tournament::Tournament &, tournament::round_index
+      ) const override;
     };
   }
 }

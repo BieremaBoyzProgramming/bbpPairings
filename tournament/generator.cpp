@@ -490,14 +490,12 @@ namespace tournament
         // Compute the matching.
 
         result.updateRanks();
-
-        if (configuration.automaticAcceleration)
+        result.computePlayerData();
+        if (result.defaultAcceleration)
         {
           swisssystems::getInfo(swissSystem)
-            .updateAccelerations(result);
+            .updateAccelerations(result, result.playedRounds);
         }
-
-        result.computePlayerData();
 
         std::list<swisssystems::Pairing> matching;
         try

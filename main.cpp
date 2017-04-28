@@ -531,6 +531,19 @@ int main(const int argc, char**const argv)
         tournament.updateRanks();
         tournament.computePlayerData();
 
+        // Add default accelerations.
+        const swisssystems::Info &info = swisssystems::getInfo(swissSystem);
+        if (tournament.defaultAcceleration)
+        {
+          for (
+            tournament::round_index round_index{ };
+            round_index <= tournament.playedRounds;
+            ++round_index)
+          {
+            info.updateAccelerations(tournament, round_index);
+          }
+        }
+
         // Open the output file, if specified.
         std::ofstream outputFileStream;
         std::ostream *outputStream = &std::cout;
@@ -580,9 +593,7 @@ int main(const int argc, char**const argv)
         try
         {
           pairs =
-            swisssystems::getInfo(swissSystem).computeMatching(
-              std::move(tournament),
-              checklistStream.get());
+            info.computeMatching(std::move(tournament), checklistStream.get());
         }
         catch (const swisssystems::NoValidPairingException &exception)
         {

@@ -41,26 +41,43 @@ namespace swisssystems
 {
   namespace burstein
   {
-    void BursteinInfo::updateAccelerations(tournament::Tournament &tournament)
-      const
+    void BursteinInfo::updateAccelerations(
+      tournament::Tournament &tournament,
+      const tournament::round_index round_index
+    ) const
     {
-      if (tournament.playedRounds < 2)
+      if (round_index < 2)
       {
         tournament::player_index rankBound{ };
-        for (const tournament::Player &player : tournament.players)
+        for (
+          const tournament::player_index player_index : tournament.playersByRank
+        )
         {
-          if (player.isValid)
+          const tournament::Player &player = tournament.players[player_index];
+          if (!player.matches.size() || player.matches[0].participatedInPairing)
           {
             ++rankBound;
           }
         }
 
-        for (tournament::Player &player : tournament.players)
+        if (rankBound > 1u)
         {
-          player.accelerations.push_back(
-            player.isValid && player.rankIndex < rankBound >> 1
-              ? tournament.pointsForWin
-              : 0u);
+          for (
+            const tournament::player_index player_index
+              : tournament.playersByRank)
+          {
+            tournament::Player &player = tournament.players[player_index];
+            player.accelerations.push_back(tournament.pointsForWin);
+            if (
+              !player.matches.size() || player.matches[0].participatedInPairing)
+            {
+              rankBound -= 2;
+              if (rankBound <= 1u)
+              {
+                break;
+              }
+            }
+          }
         }
       }
     }
