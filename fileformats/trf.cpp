@@ -1008,7 +1008,16 @@ namespace fileformats
         outputStream << "001 "
           << std::setw(4)
           << utility::uintstringconversion::toString(player.id + 1u)
-          << std::setw(44)
+          << std::setw(10)
+          << "Test"
+          << std::setw(4)
+          << std::setfill('0')
+          << utility::uintstringconversion::toString(player.id + 1u)
+          << " Player"
+          << std::setw(4)
+          << utility::uintstringconversion::toString(player.id + 1u)
+          << std::setfill(' ')
+          << std::setw(19)
           << utility::uintstringconversion::toString(player.rating)
           << std::setw(28)
           << ""
