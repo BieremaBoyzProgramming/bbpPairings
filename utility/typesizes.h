@@ -95,7 +95,7 @@ namespace utility
     {
       if (make_unsigned_if_signed<T>(t) < make_unsigned_if_signed<U>(u))
       {
-        return t;
+        return (typename smallest<T, U>::type) t;
       }
       else
       {

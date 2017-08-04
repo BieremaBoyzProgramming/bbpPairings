@@ -44,7 +44,8 @@ namespace utility
       if (std::numeric_limits<U>::max() <= ~0ull)
       {
         return
-          std::uniform_int_distribution<unsigned long long>(min, max)
+          std::uniform_int_distribution<unsigned long long>
+            ((unsigned long long) min, (unsigned long long) max)
             (randomEngine);
       }
       const U scale = U(~0ull) + 1u;

@@ -311,7 +311,7 @@ namespace utility
       template <
         typename T,
         typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-      constexpr operator T() const
+      explicit constexpr operator T() const
       {
         if (
           std::is_floating_point<T>::value
@@ -327,7 +327,7 @@ namespace utility
           uint<pieces> mod = *this;
           const uint<pieces> quotient = mod.modGetQuotient(divisor);
           assert(quotient < *this);
-          return T{ quotient } * divisor + mod;
+          return (T) (T{ quotient } * divisor + mod);
         }
         else if (std::is_same<T, bool>::value)
         {
@@ -335,7 +335,7 @@ namespace utility
         }
         else
         {
-          return lowPieces;
+          return (T) lowPieces;
         }
       }
 
@@ -604,7 +604,7 @@ namespace utility
       }
 
       template <typename T>
-      constexpr operator T() const
+      explicit constexpr operator T() const
       {
         return highPiece;
       }
@@ -869,7 +869,8 @@ namespace utility
       }
       else
       {
-        return uint<pieces>{ value0 } + value1;
+        return
+          (detail::preferred_type<pieces, T>) uint<pieces>{ value0 } + value1;
       }
     }
     template <std::size_t pieces, typename T>
@@ -908,7 +909,8 @@ namespace utility
       }
       else
       {
-        return uint<pieces>{ value0 } - value1;
+        return
+          (detail::preferred_type<pieces, T>) uint<pieces>{ value0 } - value1;
       }
     }
     template <std::size_t pieces, typename T>

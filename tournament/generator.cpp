@@ -85,7 +85,7 @@ namespace tournament
     }
 
     template
-    MatchesConfiguration::MatchesConfiguration<std::minstd_rand>(
+    MatchesConfiguration::MatchesConfiguration(
       Configuration &&,
       std::minstd_rand &);
 
@@ -225,7 +225,8 @@ namespace tournament
               ::divide<float>(scheduledGames, forfeitGames)
           : maxFloat;
       drawPercentage =
-        playedGames ? drawnGames * 100u / playedGames : playedGames;
+        (decltype(drawPercentage))
+          (playedGames ? drawnGames * 100u / playedGames : playedGames);
 
       tournament.playedRounds = 0;
     }

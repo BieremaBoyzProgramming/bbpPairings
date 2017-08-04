@@ -160,7 +160,7 @@ namespace utility
 
       IterablePoolIterator<T> &operator--() &
       {
-        value = iterablePool.backwardLinks[value - &iterablePool.storage];
+        value = iterablePool->backwardLinks[value - &iterablePool->storage];
         return *this;
       }
       IterablePoolIterator<T> operator--() &&

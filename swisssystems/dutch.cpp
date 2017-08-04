@@ -259,8 +259,7 @@ namespace swisssystems
           const std::unordered_map<score_difference, score_difference_shift>
             &scoreDifferenceShifts,
           const tournament::points minScoreInBracket,
-          optimality_matching_computer::edge_weight &maxEdgeWeight =
-            optimality_matching_computer::edge_weight{ 0u })
+          optimality_matching_computer::edge_weight &maxEdgeWeight)
       {
         typename
             std::conditional<

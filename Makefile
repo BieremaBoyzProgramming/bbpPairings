@@ -29,9 +29,9 @@ optimize = yes
 static = no
 
 COMPILER_FLAGS += -std=c++14 -I. -m$(bits) -MD -MP -Wpedantic -pedantic-errors \
-	-Wall -Wextra -Wuninitialized -Wstrict-overflow=4 -Wundef -Wshadow \
-	-Wcast-qual -Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
-	-Wno-unused-parameter -Wno-sign-compare -Wno-maybe-uninitialized -Wno-overflow
+	-Wall -Wextra -Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual \
+	-Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
+	-Wno-unused-parameter -Wno-sign-compare -Wno-overflow
 
 VERSION_INFO="$(shell git describe --exact-match 2> /dev/null)"
 ifeq ($(VERSION_INFO),"")
@@ -96,7 +96,7 @@ ifeq ($(COMP),gcc)
 		-Wsuggest-final-methods -Wsuggest-override -Warray-bounds=2 \
 		-Wduplicated-cond -Wtrampolines -Wconditionally-supported \
 		-Wlogical-op -Wno-aggressive-loop-optimizations \
-		-Wvector-operation-performance
+		-Wvector-operation-performance -Wno-maybe-uninitialized -Wuninitialized
 
 	ifeq ($(HOST),Windows)
 		ifeq ($(bits),32)
@@ -117,6 +117,15 @@ ifeq ($(COMP),gcc)
 		endif
 		LDFLAGS += -lstdc++fs
 	endif
+endif
+ifeq ($(COMP),clang)
+	CXX=clang++
+	CXXFLAGS += $(COMPILER_FLAGS)
+	CXXFLAGS += -DEXPERIMENTAL_FILESYSTEM -Wno-uninitialized
+	ifeq ($(optimize),yes)
+		CXXFLAGS += -flto
+	endif
+	LDFLAGS += -lstdc++fs
 endif
 
 LDFLAGS += $(CXXFLAGS)
