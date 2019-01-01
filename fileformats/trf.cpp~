@@ -317,9 +317,7 @@ namespace fileformats
               gameWasPlayed,
               participatedInPairing);
             if (
-              participatedInPairing
-                && (opponent != id || matchScore != tournament::MATCH_SCORE_WIN)
-                && matches.size() > tournament.playedRounds)
+              participatedInPairing && matches.size() > tournament.playedRounds)
             {
               tournament.playedRounds = matches.size();
             }
@@ -965,37 +963,6 @@ namespace fileformats
       else if (!result.expectedRounds)
       {
         result.expectedRounds = result.playedRounds;
-      }
-      bool pairingAllocatedByeAssigned{ };
-      bool playerCountParity{ };
-      for (const tournament::Player &player : result.players)
-      {
-        if (player.isValid)
-        {
-          if (player.matches.size() > result.playedRounds)
-          {
-            if (player.matches[result.playedRounds].participatedInPairing)
-            {
-              if (pairingAllocatedByeAssigned)
-              {
-                throw FileFormatException(
-                  "Multiple players have been assigned the pairing-allocated "
-                    "bye."
-                );
-              }
-              pairingAllocatedByeAssigned = true;
-            }
-          }
-          else
-          {
-            playerCountParity = !playerCountParity;
-          }
-        }
-      }
-      if (playerCountParity && pairingAllocatedByeAssigned)
-      {
-        throw FileFormatException(
-          "An unnecessary pairing-allocated bye has been assigned.");
       }
       computePlayerIndexes(result, useRank);
       if (result.initialColor == tournament::COLOR_NONE)

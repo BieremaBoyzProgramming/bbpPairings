@@ -588,6 +588,20 @@ int main(const int argc, char**const argv)
               inputFilename);
         }
 
+        bool manualPairingAllocatedBye{ };
+        tournament::player_index pairingAllocatedByePlayerId;
+        for (const tournament::Player &player : tournament.players)
+        {
+          if (
+            player.isValid
+              && player.matches.size() > tournament.playedRounds
+              && player.matches[tournament.playedRounds].participatedInPairing)
+          {
+            manualPairingAllocatedBye = true;
+            pairingAllocatedByePlayerId = player.id;
+          }
+        }
+
         // Compute the matching.
         std::list<swisssystems::Pairing> pairs;
         try
@@ -615,6 +629,13 @@ int main(const int argc, char**const argv)
         }
 
         closeChecklist(checklistStream.get(), checklistFilename);
+
+        if (manualPairingAllocatedBye)
+        {
+          pairs.emplace_back(
+            pairingAllocatedByePlayerId,
+            pairingAllocatedByePlayerId);
+        }
 
         swisssystems::sortResults(pairs, tournament);
 
