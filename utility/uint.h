@@ -155,7 +155,20 @@ namespace utility
         result <<= shift;
         return result;
       }
+
+      constexpr uint<pieces> operator<<(unsigned long shift) const
+      {
+        uint<pieces> result = *this;
+        result <<= shift;
+        return result;
+      }
       constexpr uint<pieces> operator>>(const unsigned int shift) const
+      {
+        uint<pieces> result = *this;
+        result >>= shift;
+        return result;
+      }
+      constexpr uint<pieces> operator>>(int shift) const
       {
         uint<pieces> result = *this;
         result >>= shift;
@@ -943,8 +956,8 @@ namespace utility
         return
           value0 * value1.lowPieces
             + (value0 * value1.highPiece
-                << std::numeric_limits<std::uintmax_t>::digits
-                    * (pieces1 - 1u));
+                << (std::numeric_limits<std::uintmax_t>::digits
+                    * (pieces1 - 1u)));
       }
     }
     template <
