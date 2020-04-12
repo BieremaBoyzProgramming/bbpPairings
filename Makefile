@@ -109,13 +109,20 @@ ifeq ($(COMP),gcc)
 		endif
 		CXXFLAGS += $(COMPILER_FLAGS)
 	else
-		CXX=g++
 		CXXFLAGS += $(COMPILER_FLAGS)
-		CXXFLAGS += -DEXPERIMENTAL_FILESYSTEM
+
+		UNAME_S := $(shell uname -s)
+		ifeq ($(UNAME_S),Darwin)
+			CXX=clang++
+		else
+			CXX=g++
+			CXXFLAGS += -DEXPERIMENTAL_FILESYSTEM
+			LDFLAGS += -lstdc++fs
+		endif
+
 		ifeq ($(optimize),yes)
 			CXXFLAGS += -flto
 		endif
-		LDFLAGS += -lstdc++fs
 	endif
 endif
 
