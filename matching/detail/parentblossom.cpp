@@ -56,7 +56,7 @@ namespace matching
         previousChild = subblossom;
       }
     }
-#define PARENT_BLOSSOM_INSTANTIATION(a) template struct ParentBlossom<a>;
+#define PARENT_BLOSSOM_INSTANTIATION(a) template class ParentBlossom<a>;
     INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(PARENT_BLOSSOM_INSTANTIATION)
   }
 }
