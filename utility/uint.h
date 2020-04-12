@@ -947,7 +947,10 @@ namespace utility
                     * (pieces1 - 1u));
       }
     }
-    template <std::size_t pieces, typename T>
+    template <
+      std::size_t pieces,
+      typename T,
+      typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
     constexpr detail::preferred_type<pieces, T>
       operator*(const T value0, const uint<pieces> value1)
     {
