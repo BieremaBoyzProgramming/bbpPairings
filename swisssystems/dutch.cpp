@@ -1497,8 +1497,8 @@ namespace swisssystems
             {
               baseEdgeWeights[opponentIndex][*playerIterator] &= 0u;
               optimalityMatchingComputer.setEdgeWeight(
-                opponentIndex,
                 *playerIterator,
+                opponentIndex,
                 baseEdgeWeights[opponentIndex][*playerIterator]);
             }
           }
