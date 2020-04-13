@@ -1474,7 +1474,9 @@ namespace swisssystems
           if (exchange)
           {
             --exchangesRemaining;
+
             // Finalize that this player must be exchanged.
+
             for (
               decltype(remainder)::const_iterator opponentIterator =
                 remainder.begin();
@@ -1486,6 +1488,18 @@ namespace swisssystems
                 *playerIterator,
                 *opponentIterator,
                 baseEdgeWeights[*playerIterator][*opponentIterator]);
+            }
+
+            for (
+              tournament::player_index opponentIndex = nextScoreGroupBegin;
+              opponentIndex < playersByIndex.size();
+              ++opponentIndex)
+            {
+              baseEdgeWeights[opponentIndex][*playerIterator] &= 0u;
+              optimalityMatchingComputer.setEdgeWeight(
+                opponentIndex,
+                *playerIterator,
+                baseEdgeWeights[opponentIndex][*playerIterator]);
             }
           }
           if (!alreadyExchanged)
