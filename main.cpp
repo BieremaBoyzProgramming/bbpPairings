@@ -119,10 +119,7 @@ namespace
     if (!FILESYSTEM_NS::path(filename).has_parent_path())
     {
       filename =
-        FILESYSTEM_NS::absolute(
-          filename,
-          FILESYSTEM_NS::path(pathBase).remove_filename()
-        ).string();
+        FILESYSTEM_NS::path(pathBase).replace_filename(filename).string();
     }
 #endif
   }

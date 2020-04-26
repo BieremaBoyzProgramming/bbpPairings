@@ -28,7 +28,7 @@ profile = no
 optimize = yes
 static = no
 
-COMPILER_FLAGS += -std=c++14 -I. -m$(bits) -MD -MP -Wpedantic -pedantic-errors \
+COMPILER_FLAGS += -std=c++17 -I. -m$(bits) -MD -MP -Wpedantic -pedantic-errors \
 	-Wall -Wextra -Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual \
 	-Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
 	-Wno-unused-parameter -Wno-sign-compare -Wno-overflow -Wno-shadow
@@ -111,7 +111,7 @@ ifeq ($(COMP),gcc)
 	else
 		CXX=g++
 		CXXFLAGS += $(COMPILER_FLAGS)
-		CXXFLAGS += -DEXPERIMENTAL_FILESYSTEM
+		CXXFLAGS += -DFILESYSTEM
 		ifeq ($(optimize),yes)
 			CXXFLAGS += -flto
 		endif
