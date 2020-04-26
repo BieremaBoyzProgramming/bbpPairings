@@ -49,6 +49,8 @@ namespace utility
       DynamicUintView(const Iterator beginIterator_, const Iterator endIterator_
       ) : beginIterator(beginIterator_), endIterator(endIterator_) { }
 
+      DynamicUintView(const DynamicUintView<Iterator> &that) = default;
+
       template <typename ThatIterator>
       const DynamicUintView<Iterator>
         &operator=(const DynamicUintView<ThatIterator> that) const &

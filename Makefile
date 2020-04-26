@@ -31,7 +31,7 @@ static = no
 COMPILER_FLAGS += -std=c++14 -I. -m$(bits) -MD -MP -Wpedantic -pedantic-errors \
 	-Wall -Wextra -Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual \
 	-Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
-	-Wno-unused-parameter -Wno-sign-compare -Wno-overflow
+	-Wno-unused-parameter -Wno-sign-compare -Wno-overflow -Wno-shadow
 
 VERSION_INFO="$(shell git describe --exact-match 2> /dev/null)"
 ifeq ($(VERSION_INFO),"")
