@@ -9,12 +9,13 @@ The most recent version of this program can be downloaded at
 
 BBP Pairings is an engine for pairing players in a Swiss-system chess
 tournament. It attempts to implement rules specified by FIDE's Systems of
-Pairings and Program Commission. To be clear, the program is not endorsed by
-FIDE or the SPP. It is not a full tournament manager, just an engine for
-computing the pairings.
+Pairings and Program Commission. It is not a full tournament manager, just an
+engine for computing the pairings.
 
-The program currently implements the 2017 rules for the Burstein and Dutch
-systems.
+The program currently implements the 2017 rules for the Dutch system. It also
+includes an attempt to implement the Burstein system, but after examination of a
+tournament manager using it, the SPP decided against endorsement of the Burstein
+system due to multiple concerns.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
@@ -162,31 +163,11 @@ does not use the -w and -q options of JaVaFo.
 Since BBP Pairings supports more than one Swiss system, an argument specifying
 which Swiss system to use for pairing is required.
 
-For the most part, BBP Pairings was written to be compatible with compilers
-supporting the 2014 C++ standard (C++14). However, C++14 has no portable way to
-perform file path manipulation as is performed by JaVaFo (where the output file
-is created in the same directory as the input file if no directory is
-specified). Thus, by default, BBP Pairings does not have this capability, and
-the directory must be specified for both the input and output files if needed.
-However, this is included as a new feature in the working draft of the upcoming
-C++ standard (C++17), and if BBP Pairings is linked with a library that supports
-the new API, BBP Pairings will behave like JaVaFo in this respect (assuming that
-the proper flags were enabled when compiling BBP Pairings).
-
-If file path manipulation is not supported by a build, this is mentioned in the
-version information displayed when using the -r flag.
-
 The acceptable syntax forms for running BBP Pairings are:
 bbpPairings.exe [-r]
 bbpPairings.exe [-r] (--burstein | --dutch) input-file -c [-l check-list-file]
 bbpPairings.exe [-r] (--burstein | --dutch) input-file -p [output-file] [-l check-list-file]
 bbpPairings.exe [-r] (--burstein | --dutch) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l check-list-file]
-
-On a build of BBP Pairings that supports file path manipulation capabilities,
-the check-list-file argument is optional, with the same default as JaVaFo. If no
-directory is given and file path manipulation is supported, the checklist file
-is written to the same directory as input-file or trf_file (whichever is
-present).
 
 If bbpPairings.exe is not in the search path, the path to the executable should
 be substituted for bbpPairings.exe. For example, on Unix-based systems, if
