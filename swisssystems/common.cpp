@@ -36,6 +36,7 @@
 #include "burstein.h"
 #include "common.h"
 #include "dutch.h"
+#include "fast.h"
 
 namespace swisssystems
 {
@@ -414,6 +415,9 @@ namespace swisssystems
 #ifndef OMIT_BURSTEIN
   constexpr burstein::BursteinInfo bursteinInfo{ };
 #endif
+#ifndef OMIT_FAST
+  constexpr fast::FastInfo fastInfo{ };
+#endif
 
   /**
    * Retrieve the Info object for the specified SwissSystem.
@@ -429,6 +433,10 @@ namespace swisssystems
 #ifndef OMIT_BURSTEIN
     case BURSTEIN:
       return bursteinInfo;
+#endif
+#ifndef OMIT_FAST
+    case FAST:
+      return fastInfo;
 #endif
     default:
       throw std::logic_error("");

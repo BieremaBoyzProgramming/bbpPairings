@@ -2,7 +2,7 @@ OBJECTS = main.o fileformats/generatorconfiguration.o fileformats/trf.o \
 	matching/computer.o matching/detail/graph.o matching/detail/parentblossom.o \
 	matching/detail/rootblossom.o swisssystems/burstein.o swisssystems/common.o \
 	swisssystems/dutch.o tournament/checker.o tournament/generator.o \
-	tournament/tournament.o
+	tournament/tournament.o swisssystems/fast.o
 
 # Flags specifying which Swiss systems to include.
 burstein = yes

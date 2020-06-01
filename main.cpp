@@ -218,6 +218,9 @@ int main(const int argc, char**const argv)
 #ifndef OMIT_BURSTEIN
         : swissSystemString == "--burstein" ? swisssystems::BURSTEIN
 #endif
+#ifndef OMIT_FAST
+        : swissSystemString == "--fast" ? swisssystems::FAST
+#endif
         : swisssystems::NONE;
     int processedArgCount = 2 + printInfo;
 

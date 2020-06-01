@@ -38,6 +38,9 @@ namespace swisssystems
 #ifndef OMIT_BURSTEIN
     BURSTEIN,
 #endif
+#ifndef OMIT_FAST
+    FAST,
+#endif
     NONE
   };
 
