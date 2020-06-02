@@ -551,9 +551,6 @@ namespace swisssystems
       {
         return
           player0.forbiddenPairs.count(player1.id)
-              || (player0.absoluteColorPreference()
-                    && player1.absoluteColorPreference()
-                    && player0.colorPreference == player1.colorPreference)
             ? 0
             : compatibleMultiplier
                 + sameScoreGroup * sameScoreGroupMultiplier
@@ -968,6 +965,8 @@ namespace swisssystems
 
           scoreGroupBegin = *scoreGroupIterator;
         }
+
+        return true;
       }
 
       int findPairingPass(
