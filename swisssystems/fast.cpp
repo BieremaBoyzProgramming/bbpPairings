@@ -705,12 +705,304 @@ namespace swisssystems
           sortedPlayers
         );
       }
+
+      bool doGraphOptimalMatching(tournament::Tournament& tournament, std::vector<MetricScores>& metricScores, std::vector<const tournament::Player*>& unpairedPlayers, std::list<Pairing>& pairings) {
+        /**
+         * The vector of players to be paired (not including the player receiving
+         * the bye).
+         */
+        std::vector<const tournament::Player *>& vertexLabels = unpairedPlayers;
+
+        matching_computer matchingComputer(vertexLabels.size(), maxEdgeWeight);
+        if (vertexLabels.size() > ~matching_computer::size_type{ })
+        {
+          throw std::length_error("");
+        }
+
+        // Add the vertices to the matching computer.
+        for (
+          tournament::player_index playerIndex{ };
+          playerIndex < vertexLabels.size();
+          ++playerIndex)
+        {
+          matchingComputer.addVertex();
+        }
+
+        /**
+         * The scoreGroups deque contains the vertex indices of the start of each
+         * scoregroup in order. If a scoregroup can have no floaters to the next
+         * scoregroup, the start index is included twice.
+         */
+        std::deque<tournament::player_index> scoreGroups{ 0, 0 };
+
+        // Determine the scoregroups to be used for pairing, merging a scoregroup
+        // and the one below it if the scoregroup cannot be paired.
+        bool matchingIsValid = true;
+        while (scoreGroups.back() < vertexLabels.size())
+        {
+          // Assign players to one scoregroup.
+          scoreGroups.push_back(scoreGroups.back());
+          do
+          {
+            // Keep merging with lower scoregroups as needed.
+            const tournament::player_index scoreGroupBegin = scoreGroups.back();
+            do
+            {
+              // Add all the players with one score to a scoregroup.
+              for (
+                tournament::player_index vertexIndex =
+                  *++++scoreGroups.rbegin();
+                vertexIndex < scoreGroups.back();
+                ++vertexIndex)
+              {
+                matchingComputer.setEdgeWeight(
+                  scoreGroups.back(),
+                  vertexIndex,
+                  computeEdgeWeight(
+                    *vertexLabels[vertexIndex],
+                    *vertexLabels[scoreGroups.back()],
+                    vertexIndex >= *++scoreGroups.rbegin(),
+                    false));
+              }
+              ++scoreGroups.back();
+            } while (
+              scoreGroups.back() < vertexLabels.size()
+                && vertexLabels[scoreGroupBegin]
+                      ->scoreWithAcceleration(tournament)
+                    == vertexLabels[scoreGroups.back()]
+                        ->scoreWithAcceleration(tournament)
+            );
+            // Create a virtual opponent for players in the current scoregroup
+            // to ensure that no player in higher scoregroup remains unpaired.
+            if (scoreGroups.back() & 1u)
+            {
+              for (
+                tournament::player_index vertexIndex =
+                  *std::next(scoreGroups.rbegin(), 1);
+                vertexIndex < scoreGroups.back();
+                ++vertexIndex)
+              {
+                matchingComputer.setEdgeWeight(
+                  scoreGroups.back(),
+                  vertexIndex,
+                  compatibleMultiplier);
+              }
+            }
+            matchingComputer.computeMatching();
+            matchingIsValid = checkMatchingIsValid(matchingComputer, scoreGroups);
+          } while (scoreGroups.back() < vertexLabels.size() && !matchingIsValid);
+          if (
+            scoreGroups.back() < vertexLabels.size() && !(scoreGroups.back() & 1u)
+          )
+          {
+            scoreGroups.push_back(scoreGroups.back());
+          }
+        }
+
+        // If the last scoregroup cannot be paired and there is another scoregroup
+        // above it, merge the two scoregroups. Repeat.
+        while (scoreGroups.size() > 3u && !matchingIsValid)
+        {
+          scoreGroups.pop_back();
+          const tournament::player_index boundaryVertex = scoreGroups.back();
+          scoreGroups.pop_back();
+          const tournament::player_index scoreGroupBegin = scoreGroups.back();
+          scoreGroups.pop_back();
+          for (
+            tournament::player_index outerIndex = scoreGroups.back();
+            outerIndex < boundaryVertex;
+            ++outerIndex)
+          {
+            for (
+              tournament::player_index innerIndex = boundaryVertex;
+              innerIndex < vertexLabels.size();
+              ++innerIndex)
+            {
+              matchingComputer.setEdgeWeight(
+                outerIndex,
+                innerIndex,
+                computeEdgeWeight(
+                  *vertexLabels[outerIndex],
+                  *vertexLabels[innerIndex],
+                  outerIndex >= scoreGroupBegin,
+                  false));
+            }
+          }
+          matchingComputer.computeMatching();
+          scoreGroups.push_back(scoreGroupBegin);
+          scoreGroups.push_back(vertexLabels.size());
+          matchingIsValid = checkMatchingIsValid(matchingComputer, scoreGroups);
+        }
+
+        if (!matchingIsValid)
+        {
+          return false;
+        }
+
+        // Optimize the matching so that players at the top of their scoregroup
+        // play those at the bottom.
+
+        std::vector<const tournament::Player *>
+          matchingById(tournament.players.size());
+        std::deque<tournament::player_index>::iterator scoreGroupIterator =
+          scoreGroups.begin();
+        tournament::player_index scoreGroupBegin = *scoreGroupIterator;
+        tournament::player_index floaterIndex;
+        bool isFloater{ };
+        // Iterate over the scoregroups.
+        while (++scoreGroupIterator != scoreGroups.end())
+        {
+          // Some scoregroup boundaries are repeated.
+          if (scoreGroupBegin == *scoreGroupIterator)
+          {
+            continue;
+          }
+          // Collect the players to be paired in the scoregroup, including a
+          // player floated from a higher scoregroup, ordered based on SB, etc.
+          std::list<tournament::player_index> fullScoreGroup;
+          for (
+            tournament::player_index playerIndex = scoreGroupBegin;
+            playerIndex < *scoreGroupIterator;
+            ++playerIndex)
+          {
+            fullScoreGroup.push_back(playerIndex);
+          }
+          if (isFloater)
+          {
+            fullScoreGroup.push_back(floaterIndex);
+            isFloater = false;
+          }
+          fullScoreGroup.sort(
+            [&metricScores, &vertexLabels](const tournament::player_index index0,
+               const tournament::player_index index1)
+            {
+              return
+                metricScores[vertexLabels[index1]->id]
+                  < metricScores[vertexLabels[index0]->id];
+            }
+          );
+
+          // Update edge weights to include the floater as part of the scoregroup,
+          // as well as accounting for due color.
+          for (const tournament::player_index vertexIndex : fullScoreGroup)
+          {
+            for (
+              decltype(fullScoreGroup)::const_reverse_iterator neighborIterator =
+                fullScoreGroup.rbegin();
+              *neighborIterator != vertexIndex;
+              ++neighborIterator)
+            {
+              matchingComputer.setEdgeWeight(
+                vertexIndex,
+                *neighborIterator,
+                computeEdgeWeight(
+                  *vertexLabels[vertexIndex],
+                  *vertexLabels[*neighborIterator],
+                  true,
+                  true));
+            }
+          }
+
+          // Starting with the highest player, find the lowest player that
+          // preserves the matching.
+          for (
+            decltype(fullScoreGroup)::const_iterator vertexIterator
+              = fullScoreGroup.begin();
+            vertexIterator != fullScoreGroup.end();
+            ++vertexIterator)
+          {
+            if (!matchingById[vertexLabels[*vertexIterator]->id])
+            {
+              matching_computer::edge_weight neighborPriority = 1;
+              for (
+                decltype(fullScoreGroup)::const_iterator neighborIterator =
+                  std::next(vertexIterator, 1);
+                neighborIterator != fullScoreGroup.end();
+                ++neighborIterator)
+              {
+                if (!matchingById[vertexLabels[*neighborIterator]->id])
+                {
+                  matching_computer::edge_weight edgeWeight =
+                    computeEdgeWeight(
+                      *vertexLabels[*vertexIterator],
+                      *vertexLabels[*neighborIterator],
+                      true,
+                      true);
+                  if (edgeWeight)
+                  {
+                    matchingComputer.setEdgeWeight(
+                      *vertexIterator,
+                      *neighborIterator,
+                      edgeWeight + neighborPriority++);
+                  }
+                }
+              }
+              matchingComputer.computeMatching();
+              matching_computer::vertex_index match =
+                matchingComputer.getMatching()[*vertexIterator];
+              if (match >= *scoreGroupIterator)
+              {
+                floaterIndex = *vertexIterator;
+                isFloater = true;
+              }
+              else
+              {
+                // Finalize the match so the two players will not be reassigned.
+                matchingById[vertexLabels[*vertexIterator]->id] =
+                  vertexLabels[match];
+                matchingById[vertexLabels[match]->id] =
+                  vertexLabels[*vertexIterator];
+                pairings.emplace_back(
+                  vertexLabels[*vertexIterator]->id,
+                  vertexLabels[match]->id,
+                  choosePlayerColor(
+                    *vertexLabels[*vertexIterator],
+                    *vertexLabels[match],
+                    tournament,
+                    metricScores));
+
+                finalizePair(*vertexIterator, match, matchingComputer);
+              }
+            }
+          }
+
+          scoreGroupBegin = *scoreGroupIterator;
+        }
+      }
+
+      int findPairingPass(
+          std::vector<const tournament::Player *> players,
+          std::vector<const tournament::Player *> matchingById,
+          int i, int& startIndex, int direction, bool optimalColor, bool allowableColor) {
+        bool hasGap = false;
+        for (int j = startIndex; j > i && j < players.size(); j += direction) {
+          if (matchingById[players[j]->id] != nullptr) continue;
+          if (players[i]->forbiddenPairs.count(players[j]->id) > 0) {
+            hasGap = true;
+            continue;
+          }
+          if (optimalColor && players[i]->colorPreference == players[j]->colorPreference) {
+            hasGap = true;
+            continue;
+          }
+          if (allowableColor && players[i]->absoluteColorPreference() && players[j]->absoluteColorPreference()
+              && players[i]->colorPreference == players[j]->colorPreference) {
+            hasGap = true;
+            continue;
+          }
+          if (!hasGap) {
+            startIndex = j + direction;
+          }
+          return j;
+        }
+        return -1;
+      }
     }
 
-    /**
+/**
      * Return a list of the pairings (in arbitrary order) produced by running
-     * the Fast algorithm. This runs in theoretical time O(n^3 + nr) for n
-     * players and r previous rounds. If ostream is nonnull, output a checklist
+     * the Fast Swiss algorithm. This runs in theoretical time O(n log n + nr + r^3 log r) for n
+     * players and r previous rounds, which is O(n log n) if r ~ log n. If ostream is nonnull, output a checklist
      * file.
      *
      * @throws NoValidPairingExists if no valid pairing exists.
@@ -779,7 +1071,7 @@ namespace swisssystems
         }
       );
 
-      std::list<Pairing> result;
+      std::list<Pairing> pairings;
 
       // Choose the player to receive the bye, and add the bye to result. Do not
       // include the bye player in the vector of vertices.
@@ -809,19 +1101,52 @@ namespace swisssystems
           throw NoValidPairingException(
             "No player is eligible for the pairing-allocated bye.");
         }
-        result.emplace_back((*playerIterator)->id, (*playerIterator)->id);
+        pairings.emplace_back((*playerIterator)->id, (*playerIterator)->id);
         bye = *playerIterator;
         byeIterator = playerIterator;
         ++byeIterator;
         sortedPlayers.erase(playerIterator);
       }
-      /**
-       * The vector of players to be paired (not including the player receiving
-       * the bye).
-       */
-      std::vector<const tournament::Player *> vertexLabels(
-        sortedPlayers.begin(),
-        sortedPlayers.end());
+
+      std::vector<const tournament::Player*> players(sortedPlayers.begin(), sortedPlayers.end());
+      std::vector<const tournament::Player*> matchingById(tournament.players.size());
+
+      tournament::points lastScoreGroup = -1;
+      int scoreGroupEnd = -1;
+      int nextScoreGroupStart = -1;
+
+      // Find the best pairing for each player, top to bottom
+      for (int i = 0; i < players.size(); i++) {
+        tournament::points scoreGroup = players[i]->scoreWithAcceleration(tournament);
+        if (scoreGroup != lastScoreGroup) {
+          for (
+              nextScoreGroupStart = i + 1;
+              nextScoreGroupStart < players.size()
+                  && players[nextScoreGroupStart]->scoreWithAcceleration(tournament) == scoreGroup;
+              nextScoreGroupStart++) { }
+          scoreGroupEnd = nextScoreGroupStart - 1;
+          lastScoreGroup = scoreGroup;
+        }
+
+        if (matchingById[players[i]->id] != nullptr) continue;
+        int j = -1;
+        if (j == -1) j = findPairingPass(players, matchingById, i, scoreGroupEnd, -1, true, true);
+        if (j == -1) j = findPairingPass(players, matchingById, i, scoreGroupEnd, -1, false, true);
+        if (j == -1) j = findPairingPass(players, matchingById, i, nextScoreGroupStart, 1, false, true);
+        if (j == -1) j = findPairingPass(players, matchingById, i, scoreGroupEnd, -1, false, false);
+        if (j == -1) j = findPairingPass(players, matchingById, i, nextScoreGroupStart, 1, false, false);
+        if (j == -1) break;
+        matchingById[players[i]->id] = players[j];
+        matchingById[players[j]->id] = players[i];
+        pairings.emplace_back(
+            players[i]->id,
+            players[j]->id,
+            choosePlayerColor(
+              *players[i],
+              *players[j],
+              tournament,
+              metricScores));
+      }
 
       if (bye)
       {
@@ -829,271 +1154,39 @@ namespace swisssystems
         --byeIterator;
       }
 
-      matching_computer matchingComputer(vertexLabels.size(), maxEdgeWeight);
-      if (vertexLabels.size() > ~matching_computer::size_type{ })
-      {
-        throw std::length_error("");
-      }
-
-      // Add the vertices to the matching computer.
-      for (
-        tournament::player_index playerIndex{ };
-        playerIndex < vertexLabels.size();
-        ++playerIndex)
-      {
-        matchingComputer.addVertex();
-      }
-
-      /**
-       * The scoreGroups deque contains the vertex indices of the start of each
-       * scoregroup in order. If a scoregroup can have no floaters to the next
-       * scoregroup, the start index is included twice.
-       */
-      std::deque<tournament::player_index> scoreGroups{ 0, 0 };
-
-      // Determine the scoregroups to be used for pairing, merging a scoregroup
-      // and the one below it if the scoregroup cannot be paired.
-      bool matchingIsValid = true;
-      while (scoreGroups.back() < vertexLabels.size())
-      {
-        // Assign players to one scoregroup.
-        scoreGroups.push_back(scoreGroups.back());
-        do
-        {
-          // Keep merging with lower scoregroups as needed.
-          const tournament::player_index scoreGroupBegin = scoreGroups.back();
-          do
-          {
-            // Add all the players with one score to a scoregroup.
-            for (
-              tournament::player_index vertexIndex =
-                *++++scoreGroups.rbegin();
-              vertexIndex < scoreGroups.back();
-              ++vertexIndex)
-            {
-              matchingComputer.setEdgeWeight(
-                scoreGroups.back(),
-                vertexIndex,
-                computeEdgeWeight(
-                  *vertexLabels[vertexIndex],
-                  *vertexLabels[scoreGroups.back()],
-                  vertexIndex >= *++scoreGroups.rbegin(),
-                  false));
-            }
-            ++scoreGroups.back();
-          } while (
-            scoreGroups.back() < vertexLabels.size()
-              && vertexLabels[scoreGroupBegin]
-                    ->scoreWithAcceleration(tournament)
-                  == vertexLabels[scoreGroups.back()]
-                      ->scoreWithAcceleration(tournament)
-          );
-          // Create a virtual opponent for players in the current scoregroup
-          // to ensure that no player in higher scoregroup remains unpaired.
-          if (scoreGroups.back() & 1u)
-          {
-            for (
-              tournament::player_index vertexIndex =
-                *std::next(scoreGroups.rbegin(), 1);
-              vertexIndex < scoreGroups.back();
-              ++vertexIndex)
-            {
-              matchingComputer.setEdgeWeight(
-                scoreGroups.back(),
-                vertexIndex,
-                compatibleMultiplier);
-            }
-          }
-          matchingComputer.computeMatching();
-          matchingIsValid = checkMatchingIsValid(matchingComputer, scoreGroups);
-        } while (scoreGroups.back() < vertexLabels.size() && !matchingIsValid);
-        if (
-          scoreGroups.back() < vertexLabels.size() && !(scoreGroups.back() & 1u)
-        )
-        {
-          scoreGroups.push_back(scoreGroups.back());
+      std::vector<const tournament::Player*> unpairedPlayers;
+      for (auto player : players) {
+        if (matchingById[player->id] == nullptr) {
+          unpairedPlayers.push_back(player);
         }
       }
 
-      // If the last scoregroup cannot be paired and there is another scoregroup
-      // above it, merge the two scoregroups. Repeat.
-      while (scoreGroups.size() > 3u && !matchingIsValid)
-      {
-        scoreGroups.pop_back();
-        const tournament::player_index boundaryVertex = scoreGroups.back();
-        scoreGroups.pop_back();
-        const tournament::player_index scoreGroupBegin = scoreGroups.back();
-        scoreGroups.pop_back();
-        for (
-          tournament::player_index outerIndex = scoreGroups.back();
-          outerIndex < boundaryVertex;
-          ++outerIndex)
-        {
-          for (
-            tournament::player_index innerIndex = boundaryVertex;
-            innerIndex < vertexLabels.size();
-            ++innerIndex)
+      bool needToBacktrack = unpairedPlayers.size() > 0;
+      while (needToBacktrack) {
+        for (int k = unpairedPlayers.size(); k > 0 && pairings.size() > 0; k -= 2) {
+          auto pairingToRemove = pairings.back();
+          pairings.pop_back();
+          matchingById[pairingToRemove.white] = nullptr;
+          matchingById[pairingToRemove.black] = nullptr;
+          unpairedPlayers.push_back(&tournament.players[pairingToRemove.white]);
+          unpairedPlayers.push_back(&tournament.players[pairingToRemove.black]);
+        }
+        needToBacktrack = !doGraphOptimalMatching(tournament, metricScores, unpairedPlayers, pairings);
+
+        if (needToBacktrack && pairings.size() == 0) {
+          if (ostream)
           {
-            matchingComputer.setEdgeWeight(
-              outerIndex,
-              innerIndex,
-              computeEdgeWeight(
-                *vertexLabels[outerIndex],
-                *vertexLabels[innerIndex],
-                outerIndex >= scoreGroupBegin,
-                false));
+            printChecklist(
+              tournament,
+              sortedPlayers,
+              *ostream,
+              metricScores,
+              bye);
           }
+          throw NoValidPairingException(
+            "The non-bye players cannot be simultaneously paired without "
+            "violating the absolute criteria.");
         }
-        matchingComputer.computeMatching();
-        scoreGroups.push_back(scoreGroupBegin);
-        scoreGroups.push_back(vertexLabels.size());
-        matchingIsValid = checkMatchingIsValid(matchingComputer, scoreGroups);
-      }
-
-      if (!matchingIsValid)
-      {
-        if (ostream)
-        {
-          printChecklist(
-            tournament,
-            sortedPlayers,
-            *ostream,
-            metricScores,
-            bye);
-        }
-        throw NoValidPairingException(
-          "The non-bye players cannot be simultaneously paired without "
-          "violating the absolute criteria.");
-      }
-
-      // Optimize the matching so that players at the top of their scoregroup
-      // play those at the bottom.
-
-      std::vector<const tournament::Player *>
-        matchingById(tournament.players.size());
-      std::deque<tournament::player_index>::iterator scoreGroupIterator =
-        scoreGroups.begin();
-      tournament::player_index scoreGroupBegin = *scoreGroupIterator;
-      tournament::player_index floaterIndex;
-      bool isFloater{ };
-      // Iterate over the scoregroups.
-      while (++scoreGroupIterator != scoreGroups.end())
-      {
-        // Some scoregroup boundaries are repeated.
-        if (scoreGroupBegin == *scoreGroupIterator)
-        {
-          continue;
-        }
-        // Collect the players to be paired in the scoregroup, including a
-        // player floated from a higher scoregroup, ordered based on SB, etc.
-        std::list<tournament::player_index> fullScoreGroup;
-        for (
-          tournament::player_index playerIndex = scoreGroupBegin;
-          playerIndex < *scoreGroupIterator;
-          ++playerIndex)
-        {
-          fullScoreGroup.push_back(playerIndex);
-        }
-        if (isFloater)
-        {
-          fullScoreGroup.push_back(floaterIndex);
-          isFloater = false;
-        }
-        fullScoreGroup.sort(
-          [&metricScores, &vertexLabels](const tournament::player_index index0,
-             const tournament::player_index index1)
-          {
-            return
-              metricScores[vertexLabels[index1]->id]
-                < metricScores[vertexLabels[index0]->id];
-          }
-        );
-
-        // Update edge weights to include the floater as part of the scoregroup,
-        // as well as accounting for due color.
-        for (const tournament::player_index vertexIndex : fullScoreGroup)
-        {
-          for (
-            decltype(fullScoreGroup)::const_reverse_iterator neighborIterator =
-              fullScoreGroup.rbegin();
-            *neighborIterator != vertexIndex;
-            ++neighborIterator)
-          {
-            matchingComputer.setEdgeWeight(
-              vertexIndex,
-              *neighborIterator,
-              computeEdgeWeight(
-                *vertexLabels[vertexIndex],
-                *vertexLabels[*neighborIterator],
-                true,
-                true));
-          }
-        }
-
-        // Starting with the highest player, find the lowest player that
-        // preserves the matching.
-        for (
-          decltype(fullScoreGroup)::const_iterator vertexIterator
-            = fullScoreGroup.begin();
-          vertexIterator != fullScoreGroup.end();
-          ++vertexIterator)
-        {
-          if (!matchingById[vertexLabels[*vertexIterator]->id])
-          {
-            matching_computer::edge_weight neighborPriority = 1;
-            for (
-              decltype(fullScoreGroup)::const_iterator neighborIterator =
-                std::next(vertexIterator, 1);
-              neighborIterator != fullScoreGroup.end();
-              ++neighborIterator)
-            {
-              if (!matchingById[vertexLabels[*neighborIterator]->id])
-              {
-                matching_computer::edge_weight edgeWeight =
-                  computeEdgeWeight(
-                    *vertexLabels[*vertexIterator],
-                    *vertexLabels[*neighborIterator],
-                    true,
-                    true);
-                if (edgeWeight)
-                {
-                  matchingComputer.setEdgeWeight(
-                    *vertexIterator,
-                    *neighborIterator,
-                    edgeWeight + neighborPriority++);
-                }
-              }
-            }
-            matchingComputer.computeMatching();
-            matching_computer::vertex_index match =
-              matchingComputer.getMatching()[*vertexIterator];
-            if (match >= *scoreGroupIterator)
-            {
-              floaterIndex = *vertexIterator;
-              isFloater = true;
-            }
-            else
-            {
-              // Finalize the match so the two players will not be reassigned.
-              matchingById[vertexLabels[*vertexIterator]->id] =
-                vertexLabels[match];
-              matchingById[vertexLabels[match]->id] =
-                vertexLabels[*vertexIterator];
-              result.emplace_back(
-                vertexLabels[*vertexIterator]->id,
-                vertexLabels[match]->id,
-                choosePlayerColor(
-                  *vertexLabels[*vertexIterator],
-                  *vertexLabels[match],
-                  tournament,
-                  metricScores));
-
-              finalizePair(*vertexIterator, match, matchingComputer);
-            }
-          }
-        }
-
-        scoreGroupBegin = *scoreGroupIterator;
       }
 
       if (ostream)
@@ -1106,7 +1199,7 @@ namespace swisssystems
           bye,
           &matchingById);
       }
-      return result;
+      return pairings;
     }
   }
 }

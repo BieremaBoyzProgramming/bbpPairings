@@ -41,10 +41,9 @@ acceleration).
         1. In several passes:
             1. Players in the same score group with an optimal color match
             2. Players in the same score group with an allowable color match
-            3. Players outside the score group with an optimal color match
-            4. Players outside the score group with an allowable color match
-            5. Players inside the score group ignoring colors
-            6. Players outside the score group ignoring colors
+            3. Players outside the score group with an allowable color match
+            4. Players in the same score group ignoring colors
+            5. Players outside the score group ignoring colors
         3. For each pass, look for a player `j` that player `i` has not already played
         4. If `10` possible pairings have been discarded due only to color mismatches, advance to the next pass
         5. If a pairing is found, advance to the next player 
