@@ -970,8 +970,8 @@ namespace swisssystems
       }
 
       int findPairingPass(
-          std::vector<const tournament::Player *> players,
-          std::vector<const tournament::Player *> matchingById,
+          std::vector<const tournament::Player *>& players,
+          std::vector<const tournament::Player *>& matchingById,
           int i, int& startIndex, int direction, bool optimalColor, bool allowableColor) {
         bool hasGap = false;
         for (int j = startIndex; j > i && j < players.size(); j += direction) {
