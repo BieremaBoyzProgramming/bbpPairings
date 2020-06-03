@@ -13,6 +13,14 @@ While Dutch and Burstein operate as graph optimization problems (and are corresp
 operates linearly, finding the best pairing for each player from top to bottom. This means that pairings will not be
 ideal for all players, but they should be good enough to provide a fair tournament experience. 
 
+### TRF Extension
+
+The TRF file format only supports up to 9999 players by default. With a faster pairing system, this can be too limiting.
+
+Adding a line with `XXW 7` at the top of the input TRF will change the parser to assume player ids are 7 digits (or the number of digits you specify) instead of the default 4. This affects the player and opponent ids (and corresponding whitespace) in lines that start with `001`.
+
+Also note that for byes, instead of `0000` you will need to do a full zero-fill (e.g. `0000000`).
+
 ### Performance
 
 `n` is the number of players, `r` the number of previous rounds
