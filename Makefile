@@ -126,6 +126,9 @@ build: bbpPairings.exe
 
 makefile_directory:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
+check: clean build
+	./bbpPairings.exe
+
 clean:
 	$(RM) bbpPairings.exe
 	find $(makefile_directory) -name \*.o -type f -delete
