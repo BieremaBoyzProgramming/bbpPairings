@@ -27,8 +27,17 @@ Assuming `r ~ log n`:
 - Burstein: O(n<sup>3</sup>)
 - Fast: O(n log n)
 
-Real world performance:
-- TODO: Add some tables with actual measurements
+Real world performance (worst per-round time):
+
+| Algorithm | n=200, r=9 | n=500, r=9 | n=1000, r=11 | n=10k, r=15 | n=100k, r=50
+|---       |---          |---         |---           |---          |---
+| Dutch    | 0.5s        | 7.5s       | minutes?     | days?       | years?
+| Burstein | <0.1s       | 0.4s       | 3.1s         | hours?      | months?
+| Fast     | <0.1s       | <0.1s      | <0.1s        | 0.6s        | 28s
+
+As an interesting side note, Dutch and Burstein trend faster in later rounds because score groups become smaller (which
+simplifies the optimization problem). On the other hand, Fast Swiss trends slower becuase the bottleneck is the total
+amount of data.
 
 ### Algorithm
 
