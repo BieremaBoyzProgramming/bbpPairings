@@ -974,6 +974,7 @@ namespace swisssystems
           std::vector<const tournament::Player *>& matchingById,
           int i, int& startIndex, int direction, bool optimalColor, bool allowableColor) {
         bool hasGap = false;
+        int skippedByColorPref = 0;
         for (int j = startIndex; j > i && j < players.size(); j += direction) {
           if (matchingById[players[j]->id] != nullptr) continue;
           if (players[i]->forbiddenPairs.count(players[j]->id) > 0) {
@@ -981,11 +982,13 @@ namespace swisssystems
             continue;
           }
           if (optimalColor && players[i]->colorPreference == players[j]->colorPreference) {
+            if (skippedByColorPref++ >= 10) break;
             hasGap = true;
             continue;
           }
           if (allowableColor && players[i]->absoluteColorPreference() && players[j]->absoluteColorPreference()
               && players[i]->colorPreference == players[j]->colorPreference) {
+            if (skippedByColorPref++ >= 10) break;
             hasGap = true;
             continue;
           }
