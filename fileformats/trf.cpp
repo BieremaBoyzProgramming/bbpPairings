@@ -64,6 +64,30 @@ namespace fileformats
       }
 
       /**
+       * Trim whitespace and read an integer.
+       */
+      template <typename T>
+      int readInt(const T &string)
+      {
+        int value;
+        try
+        {
+          value =
+            utility::uintstringconversion
+                ::parse<int>(getSingleValue(string));
+        }
+        catch (const std::invalid_argument &)
+        {
+          throw InvalidLineException();
+        }
+        catch (const std::out_of_range &)
+        {
+          throw InvalidLineException();
+        }
+        return value;
+      }
+
+      /**
        * Trim whitespace and read a player ID.
        */
       template <typename T>
@@ -125,7 +149,8 @@ namespace fileformats
       void readPlayer(
         const std::u32string &line,
         tournament::Tournament &tournament,
-        FileData *data)
+        FileData *data,
+        int playerIdWidth)
       {
         if (line.size() < 84)
         {
@@ -133,11 +158,11 @@ namespace fileformats
         }
 
         const tournament::player_index id =
-          readPlayerId(std::u32string(&line[4], &line[8]));
+          readPlayerId(std::u32string(&line[4], &line[4 + playerIdWidth]));
 
         tournament::rating rating{ };
 
-        const std::u32string ratingString(&line[48], &line[52]);
+        const std::u32string ratingString(&line[44 + playerIdWidth], &line[48 + playerIdWidth]);
         utility::Tokenizer<std::u32string> tokenizer(ratingString, U" ");
         if (tokenizer != utility::Tokenizer<std::u32string>())
         {
@@ -160,15 +185,18 @@ namespace fileformats
           }
         }
 
-        const tournament::points score = readScore(line.substr(80, 4));
+        const tournament::points score = readScore(line.substr(76 + playerIdWidth, 4));
+
+        std::u32string emptyFill = std::u32string(playerIdWidth, ' ');
+        std::u32string zeroFill = std::u32string(playerIdWidth, '0');
 
         tournament::round_index skippedRounds{ };
         std::vector<tournament::Match> matches;
-        std::u32string::size_type startIndex = 91u;
+        std::u32string::size_type startIndex = 87u + playerIdWidth;
         for (
           ;
-          startIndex <= line.size() - 8u;
-          startIndex += 10u)
+          startIndex <= line.size() - (4u + playerIdWidth);
+          startIndex += (6u + playerIdWidth))
         {
           /**
            * true if this entry should be treated as trailing space unless later
@@ -176,11 +204,11 @@ namespace fileformats
            */
           bool skip = true;
           bool gameWasPlayed = true;
-          const std::u32string opponentString = line.substr(startIndex, 4);
+          const std::u32string opponentString = line.substr(startIndex, playerIdWidth);
           tournament::player_index opponent = id;
-          if (opponentString != U"    ")
+          if (opponentString != emptyFill)
           {
-            if (opponentString != U"0000")
+            if (opponentString != zeroFill)
             {
               opponent = readPlayerId(opponentString);
               if (opponent == id)
@@ -194,7 +222,7 @@ namespace fileformats
           {
             gameWasPlayed = false;
           }
-          const char32_t colorChar = line[startIndex + 5];
+          const char32_t colorChar = line[startIndex + 1 + playerIdWidth];
           tournament::Color color =
             colorChar == U'w' ? tournament::COLOR_WHITE
               : colorChar == U'b' ? tournament::COLOR_BLACK
@@ -222,12 +250,12 @@ namespace fileformats
             throw InvalidLineException();
           }
 
-          if (std::numeric_limits<char>::max() < line[startIndex + 7])
+          if (std::numeric_limits<char>::max() < line[startIndex + 3 + playerIdWidth])
           {
             throw InvalidLineException();
           }
           const char resultChar =
-            std::toupper<char>(line[startIndex + 7], std::locale::classic());
+            std::toupper<char>(line[startIndex + 3 + playerIdWidth], std::locale::classic());
           tournament::MatchScore matchScore;
           if (resultChar == 'D' || resultChar == '=' || resultChar == 'H')
           {
@@ -797,6 +825,7 @@ namespace fileformats
       bool usePairingAllocatedByeScore{ };
       std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert;
       std::string buffer;
+      int playerIdWidth = 4;
       while (stream.good())
       {
         getline(stream, buffer, '\r');
@@ -825,7 +854,10 @@ namespace fileformats
             {
               if (prefix == U"001")
               {
-                readPlayer(line, result, data);
+                readPlayer(line, result, data, playerIdWidth);
+              }
+              else if (prefix == U"XXW") {
+                playerIdWidth = readInt(line.substr(4));
               }
               else if (prefix == U"XXA")
               {
