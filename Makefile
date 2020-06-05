@@ -127,7 +127,7 @@ build: bbpPairings.exe
 makefile_directory:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 check: clean build
-	./bbpPairings.exe
+	./test/simulate.py -S -h
 
 clean:
 	$(RM) bbpPairings.exe

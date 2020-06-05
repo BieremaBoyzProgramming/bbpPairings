@@ -178,9 +178,9 @@ version information displayed when using the -r flag.
 
 The acceptable syntax forms for running BBP Pairings are:
 bbpPairings.exe [-r]
-bbpPairings.exe [-r] (--burstein | --dutch) input-file -c [-l check-list-file]
-bbpPairings.exe [-r] (--burstein | --dutch) input-file -p [output-file] [-l check-list-file]
-bbpPairings.exe [-r] (--burstein | --dutch) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l check-list-file]
+bbpPairings.exe [-r] (--burstein | --dutch | --fast) input-file -c [-l check-list-file]
+bbpPairings.exe [-r] (--burstein | --dutch | --fast) input-file -p [output-file] [-l check-list-file]
+bbpPairings.exe [-r] (--burstein | --dutch | --fast) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l check-list-file]
 
 On a build of BBP Pairings that supports file path manipulation capabilities,
 the check-list-file argument is optional, with the same default as JaVaFo. If no
