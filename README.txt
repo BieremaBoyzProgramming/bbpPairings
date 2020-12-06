@@ -1,7 +1,6 @@
 BBP Pairings, a Swiss-system chess tournament engine
 created by Bierema Boyz Programming
-copyright (C) 2016
-See LICENSE.txt for additional copyright and licensing information.
+See LICENSE.txt for copyright and licensing information.
 
 The most recent version of this program can be downloaded at
 <https://github.com/BieremaBoyzProgramming/bbpPairings/releases>.
@@ -13,9 +12,8 @@ Pairings and Program Commission. It is not a full tournament manager, just an
 engine for computing the pairings.
 
 The program currently implements the 2017 rules for the Dutch system. It also
-includes an attempt to implement the Burstein system, but after examination of a
-tournament manager using it, the SPP decided against endorsement of the Burstein
-system due to multiple concerns.
+includes a flawed implementation of a version of the Burstein system, not
+endorsed by the SPP.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,

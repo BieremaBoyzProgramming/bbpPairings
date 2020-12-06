@@ -1,0 +1,3 @@
+Some of BBP Pairings' interface elements, including input and output file
+formats, were reused from JaVaFo version 1.4, by Roberto Ricca, made available
+via rrweb.org/javafo.
