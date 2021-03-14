@@ -2,8 +2,10 @@ BBP Pairings, a Swiss-system chess tournament engine
 created by Bierema Boyz Programming
 See LICENSE.txt for copyright and licensing information.
 
-The most recent version of this program can be downloaded at
+The most recent official version of this program can be downloaded at
 <https://github.com/BieremaBoyzProgramming/bbpPairings/releases>.
+The version at <https://github.com/BieremaBoyzProgramming/bbpPairings> may
+include changes that have not yet been included in a release.
 
 
 BBP Pairings is an engine for pairing players in a Swiss-system chess

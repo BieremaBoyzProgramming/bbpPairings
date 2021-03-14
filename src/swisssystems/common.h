@@ -112,9 +112,7 @@ namespace swisssystems
    * Check whether the player is eligible for the bye under the normal
    * restrictions imposed on all Swiss systems.
    */
-  inline bool eligibleForBye(
-    const tournament::Player &player,
-    const tournament::Tournament &tournament)
+  inline bool eligibleForBye(const tournament::Player &player)
   {
     for (const tournament::Match &match : player.matches)
     {

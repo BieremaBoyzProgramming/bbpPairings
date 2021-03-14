@@ -32,6 +32,7 @@ namespace utility
       T currentValue = value;
       while (divisor)
       {
+        static_assert(radix <= 10);
         result += '0' + char(currentValue / divisor);
         currentValue %= divisor;
         divisor /= radix;
@@ -79,7 +80,14 @@ namespace utility
           && *iterator >= '0'
           && *iterator < char{ '0' + radix })
       {
-        Result newValue = result * radix;
+        typedef
+          std::conditional<
+            std::is_unsigned_v<Result>,
+            largest<unsigned int, Result>::type,
+            Result
+          >::type
+          Operatable;
+        Result newValue = Operatable{ result } * radix;
         if (newValue / radix < result)
         {
           throw std::out_of_range("");
@@ -138,13 +146,24 @@ namespace utility
     template <
       typename Result,
       uinttypes::uint_least_for_value<10> radix = 10,
-      typename T>
+      typename T,
+      std::size_t precision>
     inline Result parse(
       T &iterator,
-      const T endIterator,
-      typename std::iterator_traits<T>::difference_type precision)
+      const T endIterator)
     {
+      static_assert(
+        (typename std::iterator_traits<T>::difference_type)precision >= 0u
+          && (typename std::iterator_traits<T>::difference_type)precision
+              == precision);
       Result value = parse<Result, radix>(iterator, endIterator);
+      typedef
+        std::conditional<
+          std::is_unsigned_v<Result>,
+          largest<unsigned int, Result>::type,
+          Result
+        >::type
+        Operatable;
       if (iterator != endIterator && *iterator == '.')
       {
         if (
@@ -162,7 +181,7 @@ namespace utility
         {
           throw std::invalid_argument("");
         }
-        Result multiplier =
+        Operatable multiplier =
           typesizes::exponential<Result, radix>(iterator - startIterator);
         Result newValue = value * multiplier;
         if (newValue / multiplier < value)
@@ -184,7 +203,7 @@ namespace utility
       {
         throw std::out_of_range("");
       }
-      Result multiplier = typesizes::exponential<Result, radix>(precision);
+      Operatable multiplier = typesizes::exponential<Result, radix>(precision);
       Result result = value * multiplier;
       if (result / multiplier < value)
       {
@@ -200,10 +219,12 @@ namespace utility
     template <
       typename Result,
       uinttypes::uint_least_for_value<10> radix = 10,
-      typename T>
+      typename T,
+      std::size_type precision>
     inline Result
-      parse(const T &string, const typename T::size_type precision)
+      parse(const T &string)
     {
+      
       typename T::const_iterator iterator = string.begin();
       Result result = parse<Result, radix>(iterator, string.end(), precision);
       if (iterator != string.end())

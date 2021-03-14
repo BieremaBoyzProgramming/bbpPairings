@@ -1,0 +1,26 @@
+--- a/COPYING.MinGW-w64-runtime.txt
++++ b/COPYING.MinGW-w64-runtime.txt
+@@ -206,18 +206,13 @@
+ 
+         *       *       *       *       *       *       *
+ 
+-FIXME: Cephes math lib
++Portions from the Cephes math lib
+ Copyright (C) 1984-1998 Stephen L. Moshier
+ 
+-It sounds vague, but as to be found at
+-<http://lists.debian.org/debian-legal/2004/12/msg00295.html>, it gives an
+-impression that the author could be willing to give an explicit
+-permission to distribute those files e.g. under a BSD style license. So
+-probably there is no problem here, although it could be good to get a
+-permission from the author and then add a license into the Cephes files
+-in MinGW runtime. At least on follow-up it is marked that debian sees the
+-version a-like BSD one. As MinGW.org (where those cephes parts are coming
+-from) distributes them now over 6 years, it should be fine.
++Some of the software included may be from the book _Methods and Programs for
++Mathematical Functions_ (Prentice-Hall, 1989) or from the Cephes Mathematical
++Library, a commercial product. In either event, it is copyrighted by the author.
++It comes with no support or guarantee.
+ 
+ ===================================
+ Headers and IDLs imported from Wine

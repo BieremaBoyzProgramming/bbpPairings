@@ -1,14 +1,6 @@
 #include <chrono>
 #include <exception>
-#ifdef EXPERIMENTAL_FILESYSTEM
-  #include <experimental/filesystem>
-  #define FILESYSTEM_NS std::experimental::filesystem
-#else
-  #ifdef FILESYSTEM
-    #include <filesystem>
-    #define FILESYSTEM_NS std::filesystem
-  #endif
-#endif
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -76,17 +68,7 @@ namespace
       << (checkComponents
             ? ""
 #ifdef CUSTOM_BUILD
-              "with customized settings"
-#endif
-#ifndef FILESYSTEM_NS
-#ifdef CUSTOM_BUILD
-              " and "
-#endif
-              "without file path manipulation, "
-#else
-#ifdef CUSTOM_BUILD
-              ", "
-#endif
+              "with customized settings, "
 #endif
             : "")
       << __DATE__
@@ -97,13 +79,11 @@ namespace
 
   void relativizePath(std::string &filename, const std::string &pathBase)
   {
-#ifdef FILESYSTEM_NS
-    if (!FILESYSTEM_NS::path(filename).has_parent_path())
+    if (!std::filesystem::path(filename).has_parent_path())
     {
       filename =
-        FILESYSTEM_NS::path(pathBase).replace_filename(filename).string();
+        std::filesystem::path(pathBase).replace_filename(filename).string();
     }
-#endif
   }
 
   void getChecklistFilename(
@@ -117,12 +97,8 @@ namespace
     }
     else
     {
-#ifdef FILESYSTEM_NS
       checklistFilename =
-        FILESYSTEM_NS::path(baseFilename).replace_extension("list").string();
-#else
-      assert(false);
-#endif
+        std::filesystem::path(baseFilename).replace_extension("list").string();
     }
   }
 
@@ -133,10 +109,8 @@ namespace
   {
     std::unique_ptr<std::ofstream> result;
     std::string relativizedFilename = filename;
-#ifdef FILESYSTEM_NS
     try
     {
-#endif
       getChecklistFilename(
         relativizedFilename,
         userSpecifiedFilename,
@@ -150,15 +124,13 @@ namespace
           << std::endl;
         result.reset();
       }
-#ifdef FILESYSTEM_NS
     }
-    catch (const FILESYSTEM_NS::filesystem_error &)
+    catch (const std::filesystem::filesystem_error &)
     {
       std::cerr
         << "Error inferring the path to the checklist."
         << std::endl;
     }
-#endif
     return result;
   }
 
@@ -274,11 +246,7 @@ int main(const int argc, char**const argv)
 #endif
 
     const bool checklist =
-#ifdef FILESYSTEM_NS
       argc >= 1 + processedArgCount
-#else
-      argc >= 2 + processedArgCount
-#endif
         && argv[processedArgCount] == std::string("-l");
     std::string checklistFilename;
     bool checklistCustomFilename{ };
@@ -325,12 +293,7 @@ int main(const int argc, char**const argv)
 #endif
 #endif
         ;
-      const char*const checklistString =
-#ifdef FILESYSTEM_NS
-        "[-l [check-list-file]]";
-#else
-        "[-l check-list-file]";
-#endif
+      const char*const checklistString = "[-l [check-list-file]]";
       std::cerr << std::endl
         << std::endl
         << "Command line argument syntax:"
@@ -419,11 +382,7 @@ int main(const int argc, char**const argv)
             tournament,
             swissSystem,
             checklistStream.get(),
-  #ifdef FILESYSTEM_NS
-            FILESYSTEM_NS::path(inputFilename).stem().string());
-  #else
-            inputFilename);
-  #endif
+            std::filesystem::path(inputFilename).stem().string());
         }
         catch (const swisssystems::UnapplicableFeatureException &exception)
         {
@@ -528,21 +487,17 @@ int main(const int argc, char**const argv)
         std::ostream *outputStream = &std::cout;
         if (pairingsOutputFile)
         {
-#ifdef FILESYSTEM_NS
           try
           {
-#endif
             relativizePath(outputFilename, inputFilename);
-#ifdef FILESYSTEM_NS
           }
-          catch (const FILESYSTEM_NS::filesystem_error &)
+          catch (const std::filesystem::filesystem_error &)
           {
             std::cerr
               << "Error extracting the directory of the input file."
               << std::endl;
             return FILE_ERROR;
           }
-#endif
 
           outputFileStream = std::ofstream(outputFilename);
           if (!outputFileStream)
@@ -856,21 +811,17 @@ int main(const int argc, char**const argv)
         // Open the output file.
         if (modelFile || configurationFile)
         {
-#ifdef FILESYSTEM_NS
           try
           {
-#endif
             relativizePath(outputFilename, inputFilename);
-#ifdef FILESYSTEM_NS
           }
-          catch (const FILESYSTEM_NS::filesystem_error &)
+          catch (const std::filesystem::filesystem_error &)
           {
             std::cerr
               << "Error extracting the directory of the input file."
               << std::endl;
             return FILE_ERROR;
           }
-#endif
         }
 
         std::ofstream outputStream(outputFilename);

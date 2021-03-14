@@ -2,6 +2,7 @@
 #define GENERATOR_H
 
 #include <functional>
+#include <limits>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -88,7 +89,7 @@ namespace tournament
             utility::random::uniformUint(randomEngine_, 1400u, 2300u))
       {
         static_assert(215u <= tournament::maxPlayers, "Overflow");
-        static_assert(2800u <= ~tournament::rating{ }, "Overflow");
+        static_assert(2800u <= std::numeric_limits<rating>::max(), "Overflow");
       }
     };
 

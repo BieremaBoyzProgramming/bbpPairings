@@ -1,9 +1,9 @@
 
-OBJECTS = main.o fileformats/generatorconfiguration.o fileformats/trf.o \
-	matching/computer.o matching/detail/graph.o matching/detail/parentblossom.o \
-	matching/detail/rootblossom.o swisssystems/burstein.o swisssystems/common.o \
-	swisssystems/dutch.o tournament/checker.o tournament/generator.o \
-	tournament/tournament.o
+SRC = src
+OBJ = build
+
+SOURCES = $(shell find $(SRC) -name "*.cpp")
+OBJECTS = $(patsubst $(SRC)/%.cpp, $(OBJ)/%.o, $(SOURCES))
 
 # Flags specifying which Swiss systems to include.
 burstein = yes
@@ -16,112 +16,212 @@ engine_comparison = yes
 # The maximum type sizes that the build should attempt to support.
 # Default values are set/computed in tournament/tournament.h based on the
 # constraints imposed by the TRF(x) format and build limitations.
-max_players = 0
+# max_players = 9999
 # Points are specified in tenths. So a value of 999 means that the max total
 # score of a player (with acceleration) is 99.9.
-max_points = 0
-max_rating = 0
-max_rounds = 0
+# max_points = 999
+# max_rating = 9999
+# max_rounds = 99
 
-bits = 64
+#bits = 64
 debug = no
 profile = no
 optimize = yes
 static = no
 COMP = gcc
 
-CXXFLAGS += -std=c++17 -I. -m$(bits) -MD -MP -Wpedantic -pedantic-errors \
-	-Wall -Wextra -Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual \
-	-Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
-	-Wno-unused-parameter -Wno-sign-compare -Wno-overflow -Wno-shadow -DFILESYSTEM
+optional_cxxflags = -std=c++20
 
-VERSION_INFO="$(shell git describe --exact-match 2> /dev/null)"
-ifeq ($(VERSION_INFO),"")
-	VERSION_INFO="non-release build $(shell git describe 2> /dev/null)"
+#optional_cxxflags +=  -Wpedantic -pedantic-errors -Wall -Wextra \
+#	-Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual -Wcast-align \
+#	-Wmissing-declarations -Wredundant-decls -Wvla -Wno-unused-parameter \
+#	-Wno-sign-compare -Wno-overflow -Wno-shadow
+
+ifdef bits
+	optional_cxxflags += -m$(bits)
 endif
-CXXFLAGS += -DVERSION_INFO=$(VERSION_INFO)
+
+version = $(shell git describe --exact-match 2> /dev/null)
+version_info = "$(version)"
+ifeq ($(version),)
+	version = $(shell git describe 2> /dev/null)
+	version_info = "non-release build$(if $(version), )$(version)"
+endif
+optional_cxxflags += -DVERSION_INFO=$(version_info)
 
 ifeq ($(static),yes)
-	LDFLAGS += -static
+	optional_ldflags += -static
 endif
 
 ifeq ($(profile),yes)
-	CXXFLAGS += -ggdb
-	CXXFLAGS += -O3
+	optional_cxxflags += -ggdb
+	optional_cxxflags += -O3
 	ifneq ($(debug),yes)
-		CXXFLAGS += -DNDEBUG
+		optional_cxxflags += -DNDEBUG
 	endif
 else
 	ifeq ($(debug),yes)
-		CXXFLAGS += -ggdb
+		optional_cxxflags += -ggdb
 		ifeq ($(optimize),yes)
-			CXXFLAGS += -Og
+			optional_cxxflags += -Og
 		endif
 	else
-		CXXFLAGS += -DNDEBUG
-		LDFLAGS += -s
+		optional_cxxflags += -DNDEBUG
+		optional_ldflags += -s
 		ifeq ($(optimize),yes)
-			CXXFLAGS += -O3
+			optional_cxxflags += -O3
 		endif
 	endif
 endif
 
 ifeq ($(optimize),yes)
-	CXXFLAGS += -flto
+	optional_cxxflags += -flto
 endif
 
 ifneq ($(burstein),yes)
-	CXXFLAGS += -DOMIT_BURSTEIN
+	optional_cxxflags += -DOMIT_BURSTEIN
 endif
 ifneq ($(dutch),yes)
-	CXXFLAGS += -DOMIT_DUTCH
+	optional_cxxflags += -DOMIT_DUTCH
 endif
 ifneq ($(engine_comparison),yes)
-	CXXFLAGS += -DOMIT_GENERATOR -DOMIT_CHECKER
+	optional_cxxflags += -DOMIT_GENERATOR -DOMIT_CHECKER
 endif
 
-ifneq ($(max_players),0)
-	CXXFLAGS += -DMAX_PLAYERS=$(max_players)
+ifdef max_players
+	optional_cxxflags += -DMAX_PLAYERS=$(max_players)
 endif
-ifneq ($(max_points),0)
-	CXXFLAGS += -DMAX_POINTS=$(max_points)
+ifdef max_points
+	optional_cxxflags += -DMAX_POINTS=$(max_points)
 endif
-ifneq ($(max_rating),0)
-	CXXFLAGS += -DMAX_RATING=$(max_rating)
+ifdef max_rating
+	optional_cxxflags += -DMAX_RATING=$(max_rating)
 endif
-ifneq ($(max_rounds),0)
-	CXXFLAGS += -DMAX_ROUNDS=$(max_rounds)
+ifdef max_rounds
+	optional_cxxflags += -DMAX_ROUNDS=$(max_rounds)
 endif
 
 ifeq ($(COMP),gcc)
 	CXX=g++
-	CXXFLAGS += -Wdouble-promotion -Wsuggest-final-types \
-		-Wsuggest-final-methods -Wsuggest-override -Warray-bounds=2 \
-		-Wduplicated-cond -Wtrampolines -Wconditionally-supported \
-		-Wlogical-op -Wno-aggressive-loop-optimizations \
-		-Wvector-operation-performance -Wno-maybe-uninitialized -Wuninitialized
+	optional_cxxflags = -Wpedantic -pedantic-errors -Wall -Wextra -Wformat=2 \
+		-Wformat-overflow=2 -Wformat-nonliteral -Wformat-security \
+		-Wformat-signedness -Wformat-truncation=2 -Wformat-y2k -Wnull-dereference \
+		-Wimplicit-fallthrough=5 -Wmissing-include-dirs -Wswitch-default \
+		-Wswitch-enum -Wunused -Wunknown-pragmas \
+		-Wstrict-overflow=5 -Wstringop-overflow=4 -Wsuggest-attribute=pure \
+		-Wsuggest-attribute=const -Wsuggest-attribute=noreturn \
+		-Wsuggest-attribute=malloc -Wsuggest-attribute=format \
+		-Wsuggest-attribute=cold -Walloc-zero -Walloc-size-larger-than=0 -Walloca \
+		-Warith-conversion -Warray-bounds=2 -Wattribute-alias=2 \
+		-Wduplicated-branches -Wduplicated-cond -Wtrampolines \
+		-Wfloat-equal -Wshadow -Wlarger-than=384 -Wframe-larger-than=1184 \
+		-Wstack-usage=1264 -Wunsafe-loop-optimizations -Wundef -Wunused-macros \
+		-Wcast-qual -Wcast-align -Wcast-align=strict -Wdate-time \
+		-Wlogical-op \
+		-Wmissing-declarations -Wnormalized -Wpacked \
+		-Wredundant-decls -Winline -Winvalid-pch -Wvector-operation-performance \
+		-Wdisabled-optimization -Wno-sign-compare
+#	optional_cxxflags += -Wdouble-promotion -Wsuggest-final-types \
+#		-Wsuggest-final-methods -Wsuggest-override -Warray-bounds=2 \
+#		-Wduplicated-cond -Wtrampolines -Wconditionally-supported \
+#		-Wlogical-op -Wno-aggressive-loop-optimizations \
+#		-Wvector-operation-performance -Wno-maybe-uninitialized -Wuninitialized
 endif
 ifeq ($(COMP),clang)
 	CXX=clang++
-	CXXFLAGS += -Wno-uninitialized
+	optional_cxxflags += -Wno-uninitialized
 endif
 
-LDFLAGS += $(CXXFLAGS)
+CXXFLAGS = $(optional_cxxflags)
 
-.PHONY: build clean
-build: bbpPairings.exe
+LDFLAGS = $(optional_ldflags) $(CXXFLAGS)
 
-makefile_directory:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+ifeq ($(COMP),gcc)
+	target = $(shell g++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
+	prefix = $(shell g++ -v 2>&1 | sed -n -e 's/.*--prefix=\([^ ]*\).*/\1/p')
+	thread_model = $(shell g++ -v 2>&1 | sed -n -e 's/Thread model: \(.*\)/\1/p')
+	ifeq ($(target),w64-mingw32)
+		ifeq ($(thread_model),win32)
+			license_target = license-w64-mingw32-without-static-winpthreads
+		endif
+		ifneq ($(static),yes)
+			license_target = license-w64-mingw32-without-static-winpthreads
+		endif
+	endif
+endif
+
+ifeq ($(target),w64-mingw32)
+	host = windows
+endif
+
+.DELETE_ON_ERROR:
+
+all: bbpPairings.exe
+.PHONY: all
+
+dist_name = bbpPairings$(if $(version),-)$(version)
+
+dist_extension = tar.gz
+ifeq ($(host),windows)
+	dist_extension = zip
+endif
+
+dist_zip = $(dist_name).$(dist_extension)
+
+dist: $(dist_zip)
+.PHONY: dist
 
 clean:
+	$(RM) $(dist_zip)
+	$(RM) -r $(dist_name)
 	$(RM) bbpPairings.exe
-	find $(makefile_directory) -name \*.o -type f -delete
-	find $(makefile_directory) -name \*.d -type f -delete
+	$(RM) -r build
+.PHONY: clean
 
-default:
-	build
+$(OBJ)/%.o: $(SRC)/%.cpp
+	mkdir -p $(dir $@)
+	$(CXX) -o $@ $^ -c -I$(SRC) -MMD -MP $(CXXFLAGS)
 
-bbpPairings.exe: $(OBJECTS)
+$(OBJ)/bbpPairings.exe: $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 
+bbpPairings.exe: $(OBJ)/bbpPairings.exe
+	cp $(OBJ)/bbpPairings.exe $@
+
 -include $(OBJECTS:%.o=%.d)
+
+$(dist_name)/:
+	mkdir -p $(dist_name)
+
+license-w64-mingw32-without-static-winpthreads: \
+		$(OBJ)/bbpPairings.exe \
+		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch \
+		$(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
+		| $(dist_name)/
+	$(if \
+		$(or \
+			$(filter win32,$(thread_model)), \
+			$(findstring winpthread,$(shell ldd $(OBJ)/bbpPairings.exe))), \
+		, \
+		$(error \
+			License file generation for statically-linked winpthreads has not been \
+				implemented))
+	mkdir -p $(dist_name)
+	cp LICENSE.txt $(dist_name)/LICENSE.txt
+	echo "" >> $(dist_name)/LICENSE.txt
+	patch -u $(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
+		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch -o /dev/stdout -s \
+		| cat >> $(dist_name)/LICENSE.txt
+.PHONY: license-w64-mingw32-without-static-winpthreads
+
+license-not-supported:
+	$(error Automatic license generation is not supported for this configuration.)
+.PHONY: license-not-supported
+
+$(dist_name)/LICENSE.txt: $(license_target)
+
+$(dist_name)/bbpPairings.exe: $(OBJ)/bbpPairings.exe | $(dist_name)/
+	cp $(OBJ)/bbpPairings.exe $@
+
+$(dist_name).zip: $(dist_name)/bbpPairings.exe $(dist_name)/LICENSE.txt
+	zip -r $(dist_zip) $(dist_name)

@@ -4,3 +4,5 @@ Copyright 2016 Jeremy Bierema.
 The source code of BBP Pairings is released under the Apache License,
 Version 2.0. The full text of the license can be found in Apache-2.0.txt.
 
+In each official build, any additional licensing terms that may apply to that
+build will be added here:
