@@ -30,12 +30,8 @@ optimize = yes
 static = no
 COMP = gcc
 
-optional_cxxflags = -std=c++20
-
-optional_cxxflags +=  -Wpedantic -pedantic-errors -Wall -Wextra \
-	-Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual -Wcast-align \
-	-Wmissing-declarations -Wredundant-decls -Wvla -Wno-unused-parameter \
-	-Wno-sign-compare -Wno-overflow -Wno-shadow
+optional_cxxflags = -std=c++20 -Wpedantic -pedantic-errors -Wall -Wextra \
+	-Wno-sign-compare
 
 ifdef bits
 	optional_cxxflags += -m$(bits)
@@ -48,6 +44,22 @@ ifeq ($(version),)
 	version_info = "non-release build$(if $(version), )$(version)"
 endif
 optional_cxxflags += -DVERSION_INFO=$(version_info)
+
+ifeq ($(COMP),gcc)
+	target = $(shell g++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
+	prefix = $(shell g++ -v 2>&1 | sed -n -e 's/.*--prefix=\([^ ]*\).*/\1/p')
+	thread_model = $(shell g++ -v 2>&1 | sed -n -e 's/Thread model: \(.*\)/\1/p')
+	ifeq ($(target),w64-mingw32)
+		license_id = w64-mingw32
+		host = windows
+	endif
+endif
+ifeq ($(COMP),clang)
+	target = $(shell clang++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
+	ifeq ($(target),w64-windows-gnu)
+		host = windows
+	endif
+endif
 
 ifeq ($(static),yes)
 	optional_ldflags += -static
@@ -75,7 +87,12 @@ else
 endif
 
 ifeq ($(optimize),yes)
-	optional_cxxflags += -flto
+	# I haven't gotten LTO to work with Clang on mingw-w64.
+	ifneq ($(COMP),clang)
+		optional_cxxflags += -flto
+	else ifneq ($(target),w64-windows-gnu)
+		optional_cxxflags += -flto
+	endif
 endif
 
 ifneq ($(burstein),yes)
@@ -103,10 +120,9 @@ endif
 
 ifeq ($(COMP),gcc)
 	CXX=g++
-	optional_cxxflags += -Wpedantic -pedantic-errors -Wall -Wextra \
-		-Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual -Wcast-align \
-		-Wmissing-declarations -Wredundant-decls -Wvla -Wno-unused-parameter \
-		-Wno-sign-compare -Wno-overflow -Wno-shadow -Wdouble-promotion \
+	optional_cxxflags += -Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual \
+		-Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
+		-Wno-unused-parameter -Wno-overflow -Wno-shadow -Wdouble-promotion \
 		-Wsuggest-final-types -Wsuggest-final-methods -Wsuggest-override \
 		-Warray-bounds=2 -Wduplicated-cond -Wtrampolines -Wconditionally-supported \
 		-Wlogical-op -Wno-aggressive-loop-optimizations \
@@ -114,26 +130,12 @@ ifeq ($(COMP),gcc)
 endif
 ifeq ($(COMP),clang)
 	CXX=clang++
-	optional_cxxflags += -Weverything
+	optional_cxxflags += -Wno-uninitialized
 endif
 
 CXXFLAGS = $(optional_cxxflags)
 
 LDFLAGS = $(optional_ldflags) $(CXXFLAGS)
-
-license-target = license-not-supported
-ifeq ($(COMP),gcc)
-	target = $(shell g++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
-	prefix = $(shell g++ -v 2>&1 | sed -n -e 's/.*--prefix=\([^ ]*\).*/\1/p')
-	thread_model = $(shell g++ -v 2>&1 | sed -n -e 's/Thread model: \(.*\)/\1/p')
-	ifeq ($(target),w64-mingw32)
-		license_target = license-w64-mingw32
-	endif
-endif
-
-ifeq ($(target),w64-mingw32)
-	host = windows
-endif
 
 .DELETE_ON_ERROR:
 
@@ -174,7 +176,11 @@ bbpPairings.exe: $(OBJ)/bbpPairings.exe
 $(dist_name)/:
 	mkdir -p $(dist_name)
 
-license-w64-mingw32: \
+$(dist_name)/bbpPairings.exe: $(OBJ)/bbpPairings.exe | $(dist_name)/
+	cp $(OBJ)/bbpPairings.exe $@
+
+ifeq ($(license_id),w64-mingw32)
+$(dist_name)/LICENSE.txt: \
 		$(OBJ)/bbpPairings.exe \
 		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch \
 		$(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
@@ -193,16 +199,24 @@ license-w64-mingw32: \
 	patch -u $(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
 		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch -o /dev/stdout -s \
 		| cat >> $(dist_name)/LICENSE.txt
-.PHONY: license-w64-mingw32
-
-license-not-supported:
+else
+$(dist_name)/LICENSE.txt:
 	$(error Automatic license generation is not supported for this configuration.)
-.PHONY: license-not-supported
+endif
 
-$(dist_name)/LICENSE.txt: $(license_target)
+$(dist_name)/NOTICE.txt: NOTICE.txt
+	cp NOTICE.txt $@
 
-$(dist_name)/bbpPairings.exe: $(OBJ)/bbpPairings.exe | $(dist_name)/
-	cp $(OBJ)/bbpPairings.exe $@
+$(dist_name)/README.txt: README.txt
+	cp README.txt $@
 
-$(dist_name).zip: $(dist_name)/bbpPairings.exe $(dist_name)/LICENSE.txt
+$(dist_name)/Apache-2.0.txt: Apache-2.0.txt
+	cp Apache-2.0.txt $@
+
+dist-targets: \
+		$(dist_name)/bbpPairings.exe $(dist_name)/LICENSE.txt \
+		$(dist_name)/NOTICE.txt $(dist_name)/README.txt $(dist_name)/Apache-2.0.txt
+.PHONY: dist-targets
+
+$(dist_name).zip: dist-targets
 	zip -r $(dist_zip) $(dist_name)
