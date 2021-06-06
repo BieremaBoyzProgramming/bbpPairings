@@ -121,17 +121,13 @@ CXXFLAGS = $(optional_cxxflags)
 
 LDFLAGS = $(optional_ldflags) $(CXXFLAGS)
 
+license-target = license-not-supported
 ifeq ($(COMP),gcc)
 	target = $(shell g++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
 	prefix = $(shell g++ -v 2>&1 | sed -n -e 's/.*--prefix=\([^ ]*\).*/\1/p')
 	thread_model = $(shell g++ -v 2>&1 | sed -n -e 's/Thread model: \(.*\)/\1/p')
 	ifeq ($(target),w64-mingw32)
-		ifeq ($(thread_model),win32)
-			license_target = license-w64-mingw32-without-static-winpthreads
-		endif
-		ifneq ($(static),yes)
-			license_target = license-w64-mingw32-without-static-winpthreads
-		endif
+		license_target = license-w64-mingw32
 	endif
 endif
 
@@ -178,7 +174,7 @@ bbpPairings.exe: $(OBJ)/bbpPairings.exe
 $(dist_name)/:
 	mkdir -p $(dist_name)
 
-license-w64-mingw32-without-static-winpthreads: \
+license-w64-mingw32: \
 		$(OBJ)/bbpPairings.exe \
 		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch \
 		$(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
@@ -197,7 +193,7 @@ license-w64-mingw32-without-static-winpthreads: \
 	patch -u $(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
 		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch -o /dev/stdout -s \
 		| cat >> $(dist_name)/LICENSE.txt
-.PHONY: license-w64-mingw32-without-static-winpthreads
+.PHONY: license-w64-mingw32
 
 license-not-supported:
 	$(error Automatic license generation is not supported for this configuration.)
