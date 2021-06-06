@@ -68,36 +68,6 @@ namespace utility
     };
 
     /**
-     * Return the type with largest max value.
-     */
-    template <
-      typename MaxSoFar,
-      typename T = void,
-      typename... Targs>
-    struct largest
-    {
-      typedef
-        typename
-          largest<
-            typename
-              std::conditional<
-                std::numeric_limits<T>::max()
-                  < std::numeric_limits<MaxSoFar>::max(),
-                T,
-                MaxSoFar
-              >::type,
-            Targs...
-          >::type
-        type;
-    };
-
-    template <typename MaxSoFar>
-    struct largest<MaxSoFar>
-    {
-      typedef MaxSoFar type;
-    };
-
-    /**
      * Return the minimum of two unsigned integers, returned in the smaller of
      * the two types (as determined by smallest<T, U>).
      */
@@ -140,18 +110,11 @@ namespace utility
     constexpr Result
       exponential(const Exponent exponent, const bool inverse = false)
     {
-      typedef
-        std::conditional<
-          std::is_unsigned_v<Result>,
-          largest<unsigned int, Result>::type,
-          Result
-        >::type
-        Operatable;
       if (exponent >= Exponent{ 2 })
       {
-        const Operatable multiplier0 =
+        const Result multiplier0 =
           exponential<Result, radix>(exponent / 2u, inverse);
-        const Operatable multiplier1 =
+        const Result multiplier1 =
           exponent % 2u
             ? multiplier0 * (inverse ? Result{ 1 } / radix : Result{ radix })
             : multiplier0;
@@ -172,9 +135,8 @@ namespace utility
       else
       {
         return
-          Operatable{ exponential<Result, radix>(Exponent{ 1 }, !inverse) }
-            * Operatable{
-                exponential<Result, radix>(-(exponent + 1), !inverse) };
+          exponential<Result, radix>(Exponent{ 1 }, !inverse)
+            * exponential<Result, radix>(-(exponent + 1), !inverse);
       }
     }
 

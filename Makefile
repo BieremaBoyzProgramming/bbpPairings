@@ -23,7 +23,7 @@ engine_comparison = yes
 # max_rating = 9999
 # max_rounds = 99
 
-#bits = 64
+# bits = 64
 debug = no
 profile = no
 optimize = yes
@@ -32,10 +32,10 @@ COMP = gcc
 
 optional_cxxflags = -std=c++20
 
-#optional_cxxflags +=  -Wpedantic -pedantic-errors -Wall -Wextra \
-#	-Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual -Wcast-align \
-#	-Wmissing-declarations -Wredundant-decls -Wvla -Wno-unused-parameter \
-#	-Wno-sign-compare -Wno-overflow -Wno-shadow
+optional_cxxflags +=  -Wpedantic -pedantic-errors -Wall -Wextra \
+	-Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual -Wcast-align \
+	-Wmissing-declarations -Wredundant-decls -Wvla -Wno-unused-parameter \
+	-Wno-sign-compare -Wno-overflow -Wno-shadow
 
 ifdef bits
 	optional_cxxflags += -m$(bits)
@@ -103,33 +103,18 @@ endif
 
 ifeq ($(COMP),gcc)
 	CXX=g++
-	optional_cxxflags = -Wpedantic -pedantic-errors -Wall -Wextra -Wformat=2 \
-		-Wformat-overflow=2 -Wformat-nonliteral -Wformat-security \
-		-Wformat-signedness -Wformat-truncation=2 -Wformat-y2k -Wnull-dereference \
-		-Wimplicit-fallthrough=5 -Wmissing-include-dirs -Wswitch-default \
-		-Wswitch-enum -Wunused -Wunknown-pragmas \
-		-Wstrict-overflow=5 -Wstringop-overflow=4 -Wsuggest-attribute=pure \
-		-Wsuggest-attribute=const -Wsuggest-attribute=noreturn \
-		-Wsuggest-attribute=malloc -Wsuggest-attribute=format \
-		-Wsuggest-attribute=cold -Walloc-zero -Walloc-size-larger-than=0 -Walloca \
-		-Warith-conversion -Warray-bounds=2 -Wattribute-alias=2 \
-		-Wduplicated-branches -Wduplicated-cond -Wtrampolines \
-		-Wfloat-equal -Wshadow -Wlarger-than=384 -Wframe-larger-than=1184 \
-		-Wstack-usage=1264 -Wunsafe-loop-optimizations -Wundef -Wunused-macros \
-		-Wcast-qual -Wcast-align -Wcast-align=strict -Wdate-time \
-		-Wlogical-op \
-		-Wmissing-declarations -Wnormalized -Wpacked \
-		-Wredundant-decls -Winline -Winvalid-pch -Wvector-operation-performance \
-		-Wdisabled-optimization -Wno-sign-compare
-#	optional_cxxflags += -Wdouble-promotion -Wsuggest-final-types \
-#		-Wsuggest-final-methods -Wsuggest-override -Warray-bounds=2 \
-#		-Wduplicated-cond -Wtrampolines -Wconditionally-supported \
-#		-Wlogical-op -Wno-aggressive-loop-optimizations \
-#		-Wvector-operation-performance -Wno-maybe-uninitialized -Wuninitialized
+	optional_cxxflags += -Wpedantic -pedantic-errors -Wall -Wextra \
+		-Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual -Wcast-align \
+		-Wmissing-declarations -Wredundant-decls -Wvla -Wno-unused-parameter \
+		-Wno-sign-compare -Wno-overflow -Wno-shadow -Wdouble-promotion \
+		-Wsuggest-final-types -Wsuggest-final-methods -Wsuggest-override \
+		-Warray-bounds=2 -Wduplicated-cond -Wtrampolines -Wconditionally-supported \
+		-Wlogical-op -Wno-aggressive-loop-optimizations \
+		-Wvector-operation-performance -Wno-maybe-uninitialized -Wuninitialized
 endif
 ifeq ($(COMP),clang)
 	CXX=clang++
-	optional_cxxflags += -Wno-uninitialized
+	optional_cxxflags += -Weverything
 endif
 
 CXXFLAGS = $(optional_cxxflags)
