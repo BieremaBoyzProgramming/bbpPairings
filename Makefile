@@ -52,6 +52,8 @@ ifeq ($(COMP),gcc)
 	ifeq ($(target),w64-mingw32)
 		license_id = w64-mingw32
 		host = windows
+	else ifeq ($(target),pc-linux-gnu)
+		license_id = linux
 	endif
 endif
 ifeq ($(COMP),clang)
@@ -199,6 +201,9 @@ $(dist_name)/LICENSE.txt: \
 	patch -u $(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
 		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch -o /dev/stdout -s \
 		| cat >> $(dist_name)/LICENSE.txt
+else ifeq ($(license_id),linux)
+$(dist_name)/LICENSE.txt: $(OBJ)/bbpPairings.exe | $(dist_name)/
+	cp LICENSE.txt $(dist_name)/LICENSE.txt
 else
 $(dist_name)/LICENSE.txt:
 	$(error Automatic license generation is not supported for this configuration.)
@@ -220,3 +225,6 @@ dist-targets: \
 
 $(dist_name).zip: dist-targets
 	zip -r $(dist_zip) $(dist_name)
+
+$(dist_name).tar.gz: dist-targets
+	tar -czf $(dist_zip) $(dist_name)
