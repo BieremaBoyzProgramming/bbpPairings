@@ -54,6 +54,7 @@ ifeq ($(COMP),gcc)
 		host = windows
 	else ifeq ($(target),pc-linux-gnu)
 		license_id = linux
+		host = linux
 	endif
 endif
 ifeq ($(COMP),clang)
