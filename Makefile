@@ -210,9 +210,6 @@ $(dist_name)/LICENSE.txt:
 	$(error Automatic license generation is not supported for this configuration.)
 endif
 
-$(dist_name)/NOTICE.txt: NOTICE.txt
-	cp NOTICE.txt $@
-
 $(dist_name)/README.txt: README.txt
 	cp README.txt $@
 
@@ -221,7 +218,7 @@ $(dist_name)/Apache-2.0.txt: Apache-2.0.txt
 
 dist-targets: \
 		$(dist_name)/bbpPairings.exe $(dist_name)/LICENSE.txt \
-		$(dist_name)/NOTICE.txt $(dist_name)/README.txt $(dist_name)/Apache-2.0.txt
+		$(dist_name)/README.txt $(dist_name)/Apache-2.0.txt
 .PHONY: dist-targets
 
 $(dist_name).zip: dist-targets
