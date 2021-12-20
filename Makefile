@@ -158,9 +158,7 @@ dist: $(dist_zip)
 .PHONY: dist
 
 clean:
-	$(RM) $(dist_zip)
-	$(RM) -r $(dist_name)
-	$(RM) bbpPairings.exe
+	$(RM) -r bbpPairings*
 	$(RM) -r build
 .PHONY: clean
 
