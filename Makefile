@@ -65,7 +65,11 @@ ifeq ($(COMP),clang)
 endif
 
 ifeq ($(static),yes)
-	optional_ldflags += -static
+	ifeq ($(target),pc-linux-gnu)
+		optional_ldflags += -static-libstdc++ -static-libgcc
+	else
+		optional_ldflags += -static
+	endif
 endif
 
 ifeq ($(profile),yes)
