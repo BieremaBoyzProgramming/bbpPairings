@@ -2,3 +2,5 @@
 *.exe
 *.d
 bbpPairings*
+test/test-includes.h
+test/tests/*.output
