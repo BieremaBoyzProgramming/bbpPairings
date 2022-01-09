@@ -1,13 +1,21 @@
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
 
 namespace testing
 {
-  const std::string exe_path = "bbpPairings.exe";
-  const std::string data_folder_path = "test/tests/";
+  struct Context
+  {
+    Context(const std::filesystem::path &, const std::filesystem::path &);
 
-  void assert_file_content_matches(const std::string &path1, const std::string &path2)
+    const std::filesystem::path exe_path;
+    const std::filesystem::path data_folder_path;
+  };
+
+  void assert_file_content_matches(
+    const std::filesystem::path &path1,
+    const std::filesystem::path &path2)
   {
     std::ifstream stream1(path1);
 	  std::ifstream stream2(path2);
@@ -24,9 +32,9 @@ namespace testing
       {
         throw std::runtime_error(
           "File "
-            + path1
+            + path1.string()
             + " did not match file "
-            + path2
+            + path2.string()
             + " at line "
             + std::to_string(line)
             + ", column "
@@ -45,11 +53,11 @@ namespace testing
     }
     if (!stream1.good() && !stream1.eof())
     {
-      throw std::runtime_error("Error reading file " + path1);
+      throw std::runtime_error("Error reading file " + path1.string());
     }
     if (!stream2.good() && !stream2.eof())
     {
-      throw std::runtime_error("Error reading file " + path2);
+      throw std::runtime_error("Error reading file " + path2.string());
     }
   }
 
@@ -71,7 +79,7 @@ namespace testing
   std::cout << "Running test " #test_id ":" << std::endl; \
   try \
   { \
-    TEST_FUNCTION_FOR(test_id)(); \
+    TEST_FUNCTION_FOR(test_id)(context); \
     std::cout << "...Passed!" << std::endl; \
   } \
   catch (const std::exception &exception) \
@@ -85,7 +93,28 @@ namespace testing
 
 #include <test-includes.h>
 
+namespace testing
+{
+  Context::Context(
+      const std::filesystem::path &exe_path_,
+      const std::filesystem::path &data_folder_path_)
+    : exe_path(std::filesystem::path(exe_path_).make_preferred()),
+      data_folder_path(
+        std::filesystem::path(data_folder_path_).make_preferred())
+  { }
+}
+
 int main(const int argc, char**const argv)
 {
-  return runTests();
+  if (argc < 3)
+  {
+    std::cerr
+      << "Command line argument syntax:"
+      << std::endl
+      << argv[0]
+      << " path-to-bbpPairings.exe path-to-tests-directory"
+      << std::endl;
+    return 1;
+  }
+  return runTests(testing::Context(argv[1], argv[2]));
 }

@@ -1,13 +1,13 @@
 // https://github.com/BieremaBoyzProgramming/bbpPairings/issues/7
-void TEST_FUNCTION()
+void TEST_FUNCTION(const testing::Context &context)
 {
-  auto output_path = testing::data_folder_path + STRINGIFY(TEST_ID) ".output";
+  auto output_path = context.data_folder_path / STRINGIFY(TEST_ID) ".output";
   testing::run(
-    testing::exe_path
+    context.exe_path.string()
     + " --dutch "
-    + testing::data_folder_path
-    + STRINGIFY(TEST_ID) ".input -p "
-    + output_path);
+    + (context.data_folder_path / STRINGIFY(TEST_ID) ".input").string()
+    + " -p "
+    + output_path.string());
   testing::assert_file_content_matches
-    (output_path, testing::data_folder_path + STRINGIFY(TEST_ID) ".output.expected");
+    (output_path, context.data_folder_path / STRINGIFY(TEST_ID) ".output.expected");
 }

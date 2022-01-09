@@ -230,42 +230,15 @@ $(dist_name).tar.gz: dist-targets
 	tar -czf $(dist_zip) $(dist_name)
 
 TEST = test
-TESTS = $(TEST)/tests
 
-TEST_SOURCES = $(shell find $(TESTS) -name "*.cpp")
-TEST_IDS = $(patsubst $(TESTS)/%.cpp, %, $(TEST_SOURCES))
-
-$(TEST)/test-includes.h: $(TESTS)
-	echo > $@
-	$(foreach \
-		test_id, \
-		$(TEST_IDS), \
-		echo "#define TEST_ID $(test_id)" >> $@; \
-			echo "#include <tests/$(test_id).cpp>" >> $@; \
-			echo "#undef TEST_ID" >> $@)
-	echo >> $@
-	echo "int runTests()" >> $@
-	echo { >> $@
-	echo "  BEFORE_RUNNING_TESTS" >> $@
-	$(foreach test_id, $(TEST_IDS), echo "  RUN_TEST($(test_id))" >> $@)
-	echo "  AFTER_RUNNING_TESTS" >> $@
-	echo } >> $@
-
-$(TEST)/bbpPairingsTests.exe: $(TEST)/test-includes.h $(TEST)/main.cpp
-	$(CXX) -o $@ -I$(TEST) -MMD -MP $(TEST)/main.cpp $(LDFLAGS) \
-		-Wno-missing-declarations
-
--include $(TEST)/bbpPairingsTests.d
-
-tests: $(TEST)/bbpPairingsTests.exe
+tests:
+	$(MAKE) -C $(TEST)
 .PHONY: tests
 
-test: $(TEST)/bbpPairingsTests.exe
-	$(TEST)/bbpPairingsTests.exe
+test: bbpPairings.exe
+	$(MAKE) -C $(TEST) run
 .PHONY: test
 
 clean-tests:
-	$(RM) -r $(TESTS)/*.output
-	$(RM) -r $(TEST)/bbpPairingsTests.*
-	$(RM) -r $(TEST)/test-includes.h
+	$(MAKE) -C $(TEST) clean
 .PHONY: clean-tests
