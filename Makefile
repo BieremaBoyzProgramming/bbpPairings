@@ -30,8 +30,62 @@ optimize = yes
 static = no
 COMP = gcc
 
-optional_cxxflags = -std=c++20 -Wpedantic -pedantic-errors -Wall -Wextra \
+optional_cxxflags = \
+	-std=c++20 \
+	-ftabstop=2 \
+	-Werror \
+	-Wfatal-errors \
+	-pedantic \
+	-pedantic-errors \
+	-Wall \
+	-Walloca \
+	-Wcast-qual \
+	-Wctad-maybe-unsupported \
+	-Wctor-dtor-privacy \
+	-Wdisabled-optimization \
+	-Wdouble-promotion \
+	-Wenum-conversion \
+	-Wextra \
+	-Wextra-semi \
+	-Wformat=2 \
+	-Winvalid-pch \
+	-Wmismatched-tags \
+	-Wmissing-braces \
+	-Wmissing-declarations \
+	-Wmissing-include-dirs \
+	-Wnull-dereference \
+	-Woverloaded-virtual \
+	-Wpacked \
+	-Wpointer-arith \
+	-Wredundant-decls \
+	-Wsign-promo \
+	-Wstrict-overflow=4 \
+	-Wsuggest-override \
+	-Wswitch-default \
+	-Wundef \
+	-Wunknown-pragmas \
+	-Wunused-macros \
+	-Wvla \
+	-Wzero-as-null-pointer-constant \
+	-Wno-overflow \
 	-Wno-sign-compare
+# Omitted because they were being triggered:
+# -Waggregate-return
+# -Wconversion
+# -Wdate-time
+# -Weffc++
+# -Wfloat-conversion
+# -Wfloat-equal
+# -Winline
+# -Wlong-long
+# -Wnon-virtual-dtor
+# -Wold-style-cast
+# -Wpadded
+# -Wshadow
+# -Wsign-conversion
+# -Wstrict-overflow=5
+# -Wswitch-enum
+# -Wsystem-headers
 
 ifdef bits
 	optional_cxxflags += -m$(bits)
@@ -127,17 +181,207 @@ endif
 
 ifeq ($(COMP),gcc)
 	CXX=g++
-	optional_cxxflags += -Wstrict-overflow=4 -Wundef -Wshadow -Wcast-qual \
-		-Wcast-align -Wmissing-declarations -Wredundant-decls -Wvla \
-		-Wno-unused-parameter -Wno-overflow -Wno-shadow -Wdouble-promotion \
-		-Wsuggest-final-types -Wsuggest-final-methods -Wsuggest-override \
-		-Warray-bounds=2 -Wduplicated-cond -Wtrampolines -Wconditionally-supported \
-		-Wlogical-op -Wno-aggressive-loop-optimizations \
-		-Wvector-operation-performance -Wno-maybe-uninitialized -Wuninitialized
+	optional_cxxflags += \
+		-Wabi=0 \
+		-Waligned-new=all \
+		-Walloc-zero \
+		-Warray-bounds=2 \
+		-Warray-parameter=2 \
+		-Wattribute-alias=2 \
+		-Wcast-align=strict \
+		-Wcatch-value=3 \
+		-Wconditionally-supported \
+		-Wduplicated-cond \
+		-Wformat-overflow=2 \
+		-Wformat-signedness \
+		-Wformat-truncation=2 \
+		-Wimplicit-fallthrough=3 \
+		-Winvalid-imported-macros \
+		-Wlogical-op \
+		-Wmultiple-inheritance \
+		-Wnormalized=nfkc \
+		-Wplacement-new=2 \
+		-Wredundant-tags \
+		-Wshadow=local \
+		-Wstrict-null-sentinel \
+		-Wstringop-overflow=4 \
+		-Wsuggest-attribute=cold \
+		-Wsuggest-attribute=format \
+		-Wsuggest-attribute=malloc \
+		-Wsuggest-attribute=noreturn \
+		-Wsuggest-final-methods \
+		-Wsuggest-final-types \
+		-Wsync-nand \
+		-Wtrampolines \
+		-Wunsafe-loop-optimizations \
+		-Wvector-operation-performance \
+		-Wvirtual-inheritance \
+		-Wno-maybe-uninitialized
+	# Omitted because they were being triggered:
+	# -Wabi-tag
+	# -Warith-conversion
+	# -Wduplicated-branches
+	# -Wnamespaces
+	# -Wsuggest-attribute=const
+	# -Wsuggest-attribute=pure
+	# -Wtemplates
+	# -Wuseless-cast
+	# Not recognized by the compiler:
+	# -Wbidi-chars=any
+	# -Winterference-size
+	# -Wopenacc-parallelism
 endif
 ifeq ($(COMP),clang)
 	CXX=clang++
-	optional_cxxflags += -Wno-uninitialized
+	optional_cxxflags += \
+		-Wabstract-vbase-init \
+		-Wanon-enum-enum-conversion \
+		-Warc-repeated-use-of-weak \
+		-Warray-bounds-pointer-arithmetic \
+		-Wassign-enum \
+		-Watomic-implicit-seq-cst \
+		-Watomic-properties \
+		-Wauto-import \
+		-Wbad-function-cast \
+		-Wbinary-literal \
+		-Wbind-to-temporary-copy \
+		-Wc++-compat \
+		-Wc++11-extensions \
+		-Wc++14-compat-pedantic \
+		-Wc++14-extensions \
+		-Wc++17-compat-pedantic \
+		-Wc++17-extensions \
+		-Wc++20-compat-pedantic \
+		-Wc++20-extensions \
+		-Wc99-compat \
+		-Wc99-extensions \
+		-Wcalled-once-parameter \
+		-Wcast-align \
+		-Wcast-function-type \
+		-Wclass-varargs \
+		-Wcomma \
+		-Wcompound-token-split \
+		-Wconsumed \
+		-Wcovered-switch-default \
+		-Wcstring-format-directive \
+		-Wcuda-compat \
+		-Wdeprecated \
+		-Wdeprecated-implementations \
+		-Wdirect-ivar-access \
+		-Wdisabled-macro-expansion \
+		-Wdocumentation \
+		-Wdocumentation-pedantic \
+		-Wdtor-name \
+		-Wduplicate-decl-specifier \
+		-Wduplicate-enum \
+		-Wduplicate-method-arg \
+		-Wduplicate-method-match \
+		-Wdynamic-exception-spec \
+		-Wexit-time-destructors \
+		-Wexpansion-to-defined \
+		-Wexplicit-ownership-type \
+		-Wextra-semi-stmt \
+		-Wformat-non-iso \
+		-Wformat-pedantic \
+		-Wformat-type-confusion \
+		-Wfour-char-constants \
+		-Wgcc-compat \
+		-Wglobal-constructors \
+		-Wgnu \
+		-Wheader-hygiene \
+		-Widiomatic-parentheses \
+		-Wimplicit-fallthrough \
+		-Wimplicit-retain-self \
+		-Wincomplete-module \
+		-Winconsistent-missing-destructor-override \
+		-Winvalid-or-nonexistent-directory \
+		-Wlocal-type-template-args \
+		-Wloop-analysis \
+		-Wmain \
+		-Wmax-tokens \
+		-Wmethod-signatures \
+		-Wmicrosoft \
+		-Wmissing-noreturn \
+		-Wmissing-prototypes \
+		-Wmissing-variable-declarations \
+		-Wnewline-eof \
+		-Wnon-gcc \
+		-Wnonportable-system-include-path \
+		-Wnullable-to-nonnull-conversion \
+		-Wobjc-interface-ivars \
+		-Wobjc-messaging-id \
+		-Wobjc-missing-property-synthesis \
+		-Wobjc-property-assign-on-object-type \
+		-Wobjc-signed-char-bool \
+		-Wopenmp \
+		-Wover-aligned \
+		-Woverriding-method-mismatch \
+		-Wpedantic-core-features \
+		-Wpoison-system-directories \
+		-Wpragmas \
+		-Wpre-c2x-compat \
+		-Wpre-openmp-51-compat \
+		-Wprofile-instr-missing \
+		-Wquoted-include-in-framework-header \
+		-Wreceiver-forward-class \
+		-Wredundant-parens \
+		-Wreserved-identifier \
+		-Wreserved-user-defined-literal \
+		-Wselector \
+		-Wshadow-all \
+		-Wshift-sign-overflow \
+		-Wsigned-enum-bitfield \
+		-Wspir-compat \
+		-Wstatic-in-inline \
+		-Wstrict-potentially-direct-selector \
+		-Wstrict-prototypes \
+		-Wstrict-selector-match \
+		-Wsuggest-destructor-override \
+		-Wsuper-class-method-mismatch \
+		-Wtautological-constant-in-range-compare \
+		-Wthread-safety \
+		-Wthread-safety-beta \
+		-Wthread-safety-negative \
+		-Wthread-safety-verbose \
+		-Wundeclared-selector \
+		-Wundef-prefix \
+		-Wundefined-reinterpret-cast \
+		-Wunguarded-availability \
+		-Wunnamed-type-template-args \
+		-Wunneeded-internal-declaration \
+		-Wunreachable-code-aggressive \
+		-Wunsupported-dll-base-class-template \
+		-Wunused-member-function \
+		-Wused-but-marked-unused \
+		-Wvariadic-macros \
+		-Wvector-conversion \
+		-Wno-c++98-compat-local-type-template-args \
+		-Wno-float-conversion \
+		-Wno-implicit-int-float-conversion \
+		-Wno-implicit-int-conversion \
+		-Wno-shorten-64-to-32 \
+		-Wno-sign-compare \
+		-Wno-sign-conversion \
+		-Wno-tautological-type-limit-compare \
+		-Wno-uninitialized \
+		-Wfloat-overflow-conversion \
+		-Wfloat-zero-conversion \
+		-Wimplicit-const-int-float-conversion \
+		-Wsometimes-uninitialized \
+		-Wstatic-self-init
+	# Omitted because they were being triggered:
+	# -Wc++11-compat-pedantic
+	# -Wc++98-compat-pedantic
+	# -Wconditional-uninitialized
+	# -Wundefined-func-template
+	# -Wuninitialized-const-reference
+	# -Wunused-exception-parameter
+	# -Wunused-template
+	# -Wweak-template-vtables
+	# -Wweak-vtables
+	# Not recognized by compiler:
+	# -Rmodule-lock
+	# -Rsearch-path-usage
 endif
 
 CXXFLAGS = $(optional_cxxflags)
