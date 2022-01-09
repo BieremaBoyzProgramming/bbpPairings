@@ -379,9 +379,6 @@ ifeq ($(COMP),clang)
 	# -Wunused-template
 	# -Wweak-template-vtables
 	# -Wweak-vtables
-	# Not recognized by compiler:
-	# -Rmodule-lock
-	# -Rsearch-path-usage
 endif
 
 CXXFLAGS = $(optional_cxxflags)
