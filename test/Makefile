@@ -43,7 +43,6 @@ optional_cxxflags = \
 	-Wlong-long \
 	-Wmismatched-tags \
 	-Wmissing-braces \
-	-Wmissing-declarations \
 	-Wmissing-include-dirs \
 	-Wmultiple-inheritance \
 	-Wnormalized=nfkc \
@@ -83,12 +82,12 @@ optional_cxxflags = \
 	-Wvector-operation-performance \
 	-Wvirtual-inheritance \
 	-Wvla \
-	-Wzero-as-null-pointer-constant \
-	-Wno-missing-declarations
+	-Wzero-as-null-pointer-constant
 # Omitted because they were being triggered:
 # -Wsystem-headers
 # -Wabi-tag
 # -Waggregate-return
+# -Wmissing-declarations
 # -Wnamespaces
 # Not recognized by compiler:
 # -Wbidi-chars=any
