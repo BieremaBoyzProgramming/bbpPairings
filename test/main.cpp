@@ -7,7 +7,7 @@ namespace testing
 {
   struct Context
   {
-    Context(const std::filesystem::path &, const std::filesystem::path &);
+    Context(std::filesystem::path, std::filesystem::path);
 
     const std::filesystem::path exe_path;
     const std::filesystem::path data_folder_path;
@@ -92,21 +92,20 @@ namespace testing
 #define STRINGIFY(x) STRINGIFY2(x)
 
 #include <test-includes.h>
-#include <utility.h>
 
 namespace testing
 {
   Context::Context(
-      const std::filesystem::path &exe_path_,
-      const std::filesystem::path &data_folder_path_)
-    : exe_path(utility::copy(exe_path_).make_preferred()),
-      data_folder_path(utility::copy(data_folder_path_).make_preferred())
+      std::filesystem::path exe_path_,
+      std::filesystem::path data_folder_path_)
+    : exe_path(exe_path_.make_preferred()),
+      data_folder_path(data_folder_path_.make_preferred())
   { }
 }
 
 int main(const int argc, char**const argv)
 {
-  if (argc < 3)
+  if (argc != 3)
   {
     std::cerr
       << "Command line argument syntax:"
