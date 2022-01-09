@@ -73,7 +73,6 @@ optional_cxxflags = \
 	-Wswitch-default \
 	-Wswitch-enum \
 	-Wsync-nand \
-	-Wtemplates \
 	-Wtrampolines \
 	-Wundef \
 	-Wunsafe-loop-optimizations \
@@ -89,6 +88,7 @@ optional_cxxflags = \
 # -Waggregate-return
 # -Wmissing-declarations
 # -Wnamespaces
+# -Wtemplates
 # Not recognized by compiler:
 # -Wbidi-chars=any
 # -Winterference-size

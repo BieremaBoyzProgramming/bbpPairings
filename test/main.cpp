@@ -92,15 +92,15 @@ namespace testing
 #define STRINGIFY(x) STRINGIFY2(x)
 
 #include <test-includes.h>
+#include <utility.h>
 
 namespace testing
 {
   Context::Context(
       const std::filesystem::path &exe_path_,
       const std::filesystem::path &data_folder_path_)
-    : exe_path(std::filesystem::path(exe_path_).make_preferred()),
-      data_folder_path(
-        std::filesystem::path(data_folder_path_).make_preferred())
+    : exe_path(utility::copy(exe_path_).make_preferred()),
+      data_folder_path(utility::copy(data_folder_path_).make_preferred())
   { }
 }
 
