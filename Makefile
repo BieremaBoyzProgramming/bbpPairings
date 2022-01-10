@@ -115,6 +115,8 @@ ifeq ($(COMP),clang)
 	target = $(shell clang++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
 	ifeq ($(target),w64-windows-gnu)
 		host = windows
+	else ifeq ($(target),pc-linux-gnu)
+		host = linux
 	endif
 endif
 
