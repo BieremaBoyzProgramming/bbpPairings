@@ -94,6 +94,10 @@ optional_cxxflags = \
 # -Winterference-size
 # -Wopenacc-parallelism
 
+ifeq ($(shell uname -o),Msys)
+	optional_cxxflags += -static
+endif
+
 CXX=g++
 
 CXXFLAGS = $(optional_cxxflags)
