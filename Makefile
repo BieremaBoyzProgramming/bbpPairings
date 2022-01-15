@@ -105,23 +105,23 @@ ifeq ($(COMP),gcc)
 	thread_model = $(shell g++ -v 2>&1 | sed -n -e 's/Thread model: \(.*\)/\1/p')
 	ifeq ($(target),w64-mingw32)
 		license_id = w64-mingw32
-		TARGET_OS = windows
+		target_os = windows
 	else ifeq ($(target),pc-linux-gnu)
 		license_id = linux
-		TARGET_OS = linux
+		target_os = linux
 	endif
 endif
 ifeq ($(COMP),clang)
 	target = $(shell clang++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
 	ifeq ($(target),w64-windows-gnu)
-		TARGET_OS = windows
+		target_os = windows
 	else ifeq ($(target),pc-linux-gnu)
-		TARGET_OS = linux
+		target_os = linux
 	endif
 endif
 
 ifeq ($(static),yes)
-	ifeq ($(TARGET_OS),linux)
+	ifeq ($(target_os),linux)
 		optional_ldflags += -static-libstdc++ -static-libgcc
 	else
 		optional_ldflags += -static
@@ -395,7 +395,7 @@ all: bbpPairings.exe
 dist_name = bbpPairings$(if $(version),-)$(version)
 
 dist_extension = tar.gz
-ifeq ($(TARGET_OS),windows)
+ifeq ($(target_os),windows)
 	dist_extension = zip
 endif
 
