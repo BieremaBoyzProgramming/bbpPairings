@@ -40,7 +40,6 @@ optional_cxxflags = \
 	-Wall \
 	-Walloca \
 	-Wcast-qual \
-	-Wctad-maybe-unsupported \
 	-Wctor-dtor-privacy \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
@@ -100,6 +99,8 @@ endif
 optional_cxxflags += -DVERSION_INFO=$(version_info)
 
 ifeq ($(COMP),gcc)
+	comp_version := \
+		$(shell g++ -v 2>&1 | sed -n 's/^gcc version \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
 	target = $(shell g++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
 	prefix = $(shell g++ -v 2>&1 | sed -n -e 's/.*--prefix=\([^ ]*\).*/\1/p')
 	thread_model = $(shell g++ -v 2>&1 | sed -n -e 's/Thread model: \(.*\)/\1/p')
@@ -183,22 +184,28 @@ endif
 
 ifeq ($(COMP),gcc)
 	CXX=g++
+	comp_version_major := \
+		$(shell echo $(comp_version) | sed 's/\([0-9]*\)\..*/\1/')
+	comp_version_at_least_11 := \
+		$(shell [ $(comp_version_major) -ge 11 ] && echo 1)
+	# The warning flags included for GCC are based on GCC 11.2.
 	optional_cxxflags += \
 		-Wabi=0 \
 		-Waligned-new=all \
 		-Walloc-zero \
 		-Warray-bounds=2 \
-		-Warray-parameter=2 \
+		$(if $(comp_version_at_least_11),-Warray-parameter=2) \
 		-Wattribute-alias=2 \
 		-Wcast-align=strict \
 		-Wcatch-value=3 \
 		-Wconditionally-supported \
+		$(if $(comp_version_at_least_11),-Wctad-maybe-unsupported) \
 		-Wduplicated-cond \
 		-Wformat-overflow=2 \
 		-Wformat-signedness \
 		-Wformat-truncation=2 \
 		-Wimplicit-fallthrough=3 \
-		-Winvalid-imported-macros \
+		$(if $(comp_version_at_least_11),-Winvalid-imported-macros) \
 		-Wlogical-op \
 		-Wmultiple-inheritance \
 		-Wnormalized=nfkc \
@@ -228,13 +235,10 @@ ifeq ($(COMP),gcc)
 	# -Wsuggest-attribute=pure
 	# -Wtemplates
 	# -Wuseless-cast
-	# Not recognized by the compiler:
-	# -Wbidi-chars=any
-	# -Winterference-size
-	# -Wopenacc-parallelism
 endif
 ifeq ($(COMP),clang)
 	CXX=clang++
+	# The warning flags included for Clang are based on Clang 13.
 	optional_cxxflags += \
 		-Wabstract-vbase-init \
 		-Wanon-enum-enum-conversion \
@@ -266,6 +270,7 @@ ifeq ($(COMP),clang)
 		-Wconsumed \
 		-Wcovered-switch-default \
 		-Wcstring-format-directive \
+		-Wctad-maybe-unsupported \
 		-Wcuda-compat \
 		-Wdeprecated \
 		-Wdeprecated-implementations \
