@@ -43,7 +43,6 @@ optional_cxxflags = \
 	-Wctor-dtor-privacy \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
-	-Wenum-conversion \
 	-Wextra \
 	-Wextra-semi \
 	-Wformat=2 \
@@ -201,6 +200,7 @@ ifeq ($(COMP),gcc)
 		-Wconditionally-supported \
 		$(if $(comp_version_at_least_11),-Wctad-maybe-unsupported) \
 		-Wduplicated-cond \
+		$(if $(comp_version_at_least_11),-Wenum-conversion) \
 		-Wformat-overflow=2 \
 		-Wformat-signedness \
 		-Wformat-truncation=2 \
@@ -284,6 +284,7 @@ ifeq ($(COMP),clang)
 		-Wduplicate-method-arg \
 		-Wduplicate-method-match \
 		-Wdynamic-exception-spec \
+		-Wenum-conversion \
 		-Wexit-time-destructors \
 		-Wexpansion-to-defined \
 		-Wexplicit-ownership-type \
