@@ -130,7 +130,11 @@ endif
 
 ifeq ($(profile),yes)
 	optional_cxxflags += -ggdb
-	optional_cxxflags += -O3
+	ifeq ($(COMP),emcc)
+		optional_cxxflags += -Os
+	else
+		optional_cxxflags += -O3
+	endif
 	ifneq ($(debug),yes)
 		optional_cxxflags += -DNDEBUG
 	endif
@@ -144,7 +148,11 @@ else
 		optional_cxxflags += -DNDEBUG
 		optional_ldflags += -s
 		ifeq ($(optimize),yes)
-			optional_cxxflags += -O3
+			ifeq ($(COMP),emcc)
+				optional_cxxflags += -Os
+			else
+				optional_cxxflags += -O3
+			endif
 		endif
 	endif
 endif
