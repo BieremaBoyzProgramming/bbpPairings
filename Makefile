@@ -388,6 +388,12 @@ ifeq ($(COMP),clang)
 	# -Wweak-template-vtables
 	# -Wweak-vtables
 endif
+ifeq ($(COMP),emcc)
+	CXX=emcc
+	optional_cxxflags += \
+		-Wno-uninitialized \
+		-Wsometimes-uninitialized
+endif
 
 CXXFLAGS = $(optional_cxxflags)
 
@@ -424,6 +430,11 @@ $(OBJ)/bbpPairings.exe: $(OBJECTS)
 
 bbpPairings.exe: $(OBJ)/bbpPairings.exe
 	cp $(OBJ)/bbpPairings.exe $@
+ifeq ($(COMP),emcc)
+	cp $(OBJ)/bbpPairings.wasm bbpPairings.wasm
+	sed -i '1i#!/usr/bin/env node' $@
+	chmod +x $@
+endif
 
 -include $(OBJECTS:%.o=%.d)
 
