@@ -401,6 +401,9 @@ ifeq ($(COMP),emcc)
 	optional_cxxflags += \
 		-Wno-uninitialized \
 		-Wsometimes-uninitialized
+	optional_ldflags += \
+		-sMALLOC=emmalloc \
+		-sFILESYSTEM=0
 endif
 
 CXXFLAGS = $(optional_cxxflags)
