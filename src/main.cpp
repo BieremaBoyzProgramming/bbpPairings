@@ -89,7 +89,7 @@ namespace
   void getChecklistFilename(
     std::string &checklistFilename,
     const bool userSpecifiedFilename,
-    const std::string &baseFilename)
+    const char *const baseFilename)
   {
     if (userSpecifiedFilename)
     {
@@ -177,13 +177,12 @@ int main(const int argc, char**const argv)
     const bool checkPairingsWithoutFilename =
       argc >= 1 + processedArgCount
         && argv[processedArgCount] == std::string("-c");
-    bool checkPairings =
-      argc >= 2 + processedArgCount
-        && argv[1u + processedArgCount] == std::string("-c");
+    const bool checkPairings =
+      checkPairingsWithoutFilename
+        || (argc >= 2 + processedArgCount
+              && argv[1u + processedArgCount] == std::string("-c"));
     if (checkPairingsWithoutFilename)
     {
-      inputFilename = "(stdin)";
-      checkPairings = true;
       processedArgCount += 1;
     }
     else if (checkPairings)
@@ -196,13 +195,12 @@ int main(const int argc, char**const argv)
     const bool doPairingsWithoutFilename =
       argc >= 1 + processedArgCount
         && argv[processedArgCount] == std::string("-p");
-    bool doPairings =
-      argc >= 2 + processedArgCount
-        && argv[1u + processedArgCount] == std::string("-p");
+    const bool doPairings =
+      doPairingsWithoutFilename
+        || (argc >= 2 + processedArgCount
+              && argv[1u + processedArgCount] == std::string("-p"));
     if (doPairingsWithoutFilename)
     {
-      inputFilename = "(stdin)";
-      doPairings = true;
       processedArgCount += 1;
     }
     else if (doPairings)
@@ -374,18 +372,14 @@ int main(const int argc, char**const argv)
         }
         catch (const fileformats::FileFormatException &exception)
         {
-          std::cerr << "Error parsing file "
-            << inputFilename
-            << ": "
+          std::cerr << "Error parsing file: "
             << exception.what()
             << std::endl;
           return INVALID_REQUEST;
         }
         catch (const fileformats::FileReaderException &exception)
         {
-          std::cerr << "Error reading file "
-            << inputFilename
-            << ": "
+          std::cerr << "Error reading file: "
             << exception.what()
             << std::endl;
           return FILE_ERROR;
