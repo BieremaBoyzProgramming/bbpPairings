@@ -412,9 +412,23 @@ namespace utility
       template <std::size_t>
       friend class uint;
 
-      template <std::size_t pieces0, std::size_t pieces1>
-      friend constexpr uint<std::max(pieces0, pieces1)>
-        operator*(uint<pieces0>, uint<pieces1>);
+      template <std::size_t pieces0>
+      friend constexpr uint<std::max(pieces0, pieces)>
+        operator*(const uint<pieces0> value0, const uint<pieces> value1)
+      {
+        if (pieces0 < pieces)
+        {
+          return value1 * value0;
+        }
+        else
+        {
+          return
+            value0 * value1.lowPieces
+              + (value0 * value1.highPiece
+                  << std::numeric_limits<std::uintmax_t>::digits
+                      * (pieces - 1u));
+        }
+      }
     };
 
     template <>
@@ -913,23 +927,6 @@ namespace utility
       operator*(const uint<pieces> value0, const uint<1> value1)
     {
       return value0 * value1.highPiece;
-    }
-    template <std::size_t pieces0, std::size_t pieces1>
-    constexpr uint<std::max(pieces0, pieces1)>
-      operator*(const uint<pieces0> value0, const uint<pieces1> value1)
-    {
-      if (pieces0 < pieces1)
-      {
-        return value1 * value0;
-      }
-      else
-      {
-        return
-          value0 * value1.lowPieces
-            + (value0 * value1.highPiece
-                << std::numeric_limits<std::uintmax_t>::digits
-                    * (pieces1 - 1u));
-      }
     }
     template <std::size_t pieces, typename T>
     constexpr detail::preferred_type<pieces, T>

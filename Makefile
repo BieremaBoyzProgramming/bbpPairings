@@ -65,6 +65,7 @@ optional_cxxflags = \
 	-Wunused-macros \
 	-Wvla \
 	-Wzero-as-null-pointer-constant \
+	-Wno-free-nonheap-object \
 	-Wno-overflow \
 	-Wno-sign-compare
 # Omitted because they were being triggered:

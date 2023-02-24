@@ -117,7 +117,6 @@ namespace tournament
         bool zeroPointBye{ };
         bool halfPointBye{ };
 
-        round_index matchIndex{ };
         for (const Match &match : player.matches)
         {
           if (match.participatedInPairing && match.opponent != player.id)
@@ -167,7 +166,6 @@ namespace tournament
               zeroPointBye = true;
             }
           }
-          ++matchIndex;
         }
 
         if (zeroPointBye)
