@@ -131,7 +131,11 @@ endif
 
 ifeq ($(profile),yes)
 	optional_cxxflags += -ggdb
-	optional_cxxflags += -O3
+	ifeq ($(COMP),emcc)
+		optional_cxxflags += -Os
+	else
+		optional_cxxflags += -O3
+	endif
 	ifneq ($(debug),yes)
 		optional_cxxflags += -DNDEBUG
 	endif
@@ -145,7 +149,11 @@ else
 		optional_cxxflags += -DNDEBUG
 		optional_ldflags += -s
 		ifeq ($(optimize),yes)
-			optional_cxxflags += -O3
+			ifeq ($(COMP),emcc)
+				optional_cxxflags += -Os
+			else
+				optional_cxxflags += -O3
+			endif
 		endif
 	endif
 endif
@@ -389,6 +397,14 @@ ifeq ($(COMP),clang)
 	# -Wweak-template-vtables
 	# -Wweak-vtables
 endif
+ifeq ($(COMP),emcc)
+	CXX=emcc
+	optional_cxxflags += \
+		-Wno-uninitialized \
+		-Wsometimes-uninitialized
+	optional_ldflags += \
+		-sMALLOC=emmalloc
+endif
 
 CXXFLAGS = $(optional_cxxflags)
 
@@ -425,6 +441,11 @@ $(OBJ)/bbpPairings.exe: $(OBJECTS)
 
 bbpPairings.exe: $(OBJ)/bbpPairings.exe
 	cp $(OBJ)/bbpPairings.exe $@
+ifeq ($(COMP),emcc)
+	cp $(OBJ)/bbpPairings.wasm bbpPairings.wasm
+	sed -i '1i#!/usr/bin/env node' $@
+	chmod +x $@
+endif
 
 -include $(OBJECTS:%.o=%.d)
 
