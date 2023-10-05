@@ -36,29 +36,24 @@ namespace
    */
   void printProgramInfo(std::ostream &ostream, bool checkComponents = true)
   {
-#ifdef OMIT_BURSTEIN
+#ifndef CUSTOM_BUILD
+#if defined OMIT_BURSTEIN
+#define CUSTOM_BUILD
+#elif defined OMIT_DUTCH
+#define CUSTOM_BUILD
+#elif defined OMIT_GENERATOR
+#define CUSTOM_BUILD
+#elif defined OMIT_CHECKER
+#define CUSTOM_BUILD
+#elif defined MAX_PLAYERS
+#define CUSTOM_BUILD
+#elif defined MAX_POINTS
+#define CUSTOM_BUILD
+#elif defined MAX_RATING
+#define CUSTOM_BUILD
+#elif defined MAX_ROUNDS
 #define CUSTOM_BUILD
 #endif
-#ifdef OMIT_DUTCH
-#define CUSTOM_BUILD
-#endif
-#ifdef OMIT_GENERATOR
-#define CUSTOM_BUILD
-#endif
-#ifdef OMIT_CHECKER
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_PLAYERS
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_POINTS
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_RATING
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_ROUNDS
-#define CUSTOM_BUILD
 #endif
     ostream
       << "BBP Pairings (https://github.com/BieremaBoyzProgramming/bbpPairings) "

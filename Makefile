@@ -418,7 +418,7 @@ clean: clean-tests
 
 $(OBJ)/%.o: $(SRC)/%.cpp
 	mkdir -p $(dir $@)
-	$(CXX) -o $@ $^ -c -I$(SRC) -MMD -MP $(CXXFLAGS)
+	$(CXX) -o $@ $(filter %.cpp,$^) -c -I$(SRC) -MMD -MP -MT $@ -MT $(@:%.o=%.d) $(CXXFLAGS)
 
 $(OBJ)/bbpPairings.exe: $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
