@@ -119,12 +119,12 @@ test-includes.h: $(TESTS)
 		$(TEST_IDS), \
 		echo "#define TEST_ID $(test_id)" >> $@; \
 			echo "#include <tests/$(test_id).cpp>" >> $@; \
-			echo "#undef TEST_ID" >> $@)
+			echo "#undef TEST_ID" >> $@;)
 	echo >> $@
 	echo "int runTests(const testing::Context &context)" >> $@
 	echo { >> $@
 	echo "  BEFORE_RUNNING_TESTS" >> $@
-	$(foreach test_id, $(TEST_IDS), echo "  RUN_TEST($(test_id))" >> $@)
+	$(foreach test_id, $(TEST_IDS), echo "  RUN_TEST($(test_id))" >> $@;)
 	echo "  AFTER_RUNNING_TESTS" >> $@
 	echo } >> $@
 

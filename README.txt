@@ -10,12 +10,12 @@ include changes that have not yet been included in a release.
 
 BBP Pairings is an engine for pairing players in a Swiss-system chess
 tournament. It attempts to implement rules specified by FIDE's Systems of
-Pairings and Program Commission. It is not a full tournament manager, just an
+Pairings and Programs Commission. It is not a full tournament manager, just an
 engine for computing the pairings.
 
 The program currently implements the 2017 rules for the Dutch system. It also
-includes a flawed implementation of a version of the Burstein system, not
-endorsed by the SPP.
+includes a flawed implementation of a previous version of the Burstein system.
+The implementation of the Burstein system has not been endorsed by the SPP.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
