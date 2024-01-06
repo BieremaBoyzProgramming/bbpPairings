@@ -464,12 +464,12 @@ int main(const int argc, char**const argv)
         {
           if (doPairingsWithoutFilename)
           {
-            tournament = fileformats::trf::readFile(std::cin, false);
+            tournament = fileformats::trf::readFile(std::cin, true);
           }
           else
           {
             std::ifstream inputStream(inputFilename);
-            tournament = fileformats::trf::readFile(inputStream, false);
+            tournament = fileformats::trf::readFile(inputStream, true);
           }
         }
         catch (const fileformats::FileFormatException &exception)
