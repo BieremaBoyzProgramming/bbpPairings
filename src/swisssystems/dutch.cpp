@@ -106,7 +106,9 @@ namespace swisssystems
       {
         const tournament::Match &match =
           player.matches[tournament.playedRounds - roundsBack];
-        if (!match.gameWasPlayed)
+        if (
+          !match.gameWasPlayed
+            && tournament.getPoints(player, match) > tournament.pointsForLoss)
         {
           return FLOAT_DOWN;
         }
