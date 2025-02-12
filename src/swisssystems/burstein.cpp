@@ -775,7 +775,7 @@ namespace swisssystems
         do
         {
           --playerIterator;
-          eligibleForBye = swisssystems::eligibleForBye(**playerIterator);
+          eligibleForBye = swisssystems::eligibleForByePre2025Rules(**playerIterator);
         } while (playerIterator != sortedPlayers.begin() && !eligibleForBye);
         if (!eligibleForBye)
         {

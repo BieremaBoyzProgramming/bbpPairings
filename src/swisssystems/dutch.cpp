@@ -266,8 +266,8 @@ namespace swisssystems
             max
               ? 2u
               : 1u
-                  + !eligibleForBye(higherPlayer)
-                  + !eligibleForBye(lowerPlayer);
+                  + !eligibleForBye(higherPlayer, tournament)
+                  + !eligibleForBye(lowerPlayer, tournament);
         }
 
         // Maximize the number of pairs in the current pairing bracket.
@@ -322,8 +322,8 @@ namespace swisssystems
             max ? 0u
               : finalBrackets
                 ? 1u
-                    + !eligibleForBye(higherPlayer)
-                    + !eligibleForBye(lowerPlayer)
+                    + !eligibleForBye(higherPlayer, tournament)
+                    + !eligibleForBye(lowerPlayer, tournament)
               : !lowerPlayerInCurrentBracket;
 
           // Maximize the pair scoring difference in the next bracket.
@@ -604,14 +604,14 @@ namespace swisssystems
       {
         swisssystems::printChecklist(
           ostream,
-          std::deque<std::string>{"C2", "C12", "C14", "Cur"},
+          std::deque<std::string>{"C2", "C14", "C16", "Cur"},
           [&matching, &tournament]
             (const tournament::Player &player)
           {
             const tournament::Player *opponent =
               matching ? (*matching)[player.id] : nullptr;
             return std::deque<std::string>{
-              eligibleForBye(player) ? "Y" : "N",
+              eligibleForBye(player, tournament) ? "Y" : "N",
               std::string{
                 floatToChar(
                   tournament.playedRounds
@@ -896,7 +896,7 @@ namespace swisssystems
             validityMatchingComputer.setEdgeWeight(
               playerIndex,
               sortedPlayers.size(),
-              eligibleForBye(*player));
+              eligibleForBye(*player, tournament));
           }
           ++playerIndex;
         }
