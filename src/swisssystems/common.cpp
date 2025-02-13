@@ -328,7 +328,7 @@ namespace swisssystems
     const std::function<std::deque<std::string>(const tournament::Player &)>
       &specialtyValues,
     const tournament::Tournament &tournament,
-    const std::list<const tournament::Player *> &orderedPlayers)
+    const std::vector<const tournament::Player *> &orderedPlayers)
   {
     try
     {

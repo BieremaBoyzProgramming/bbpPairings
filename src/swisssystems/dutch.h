@@ -19,11 +19,8 @@ namespace swisssystems
 {
   namespace dutch
   {
-    typedef
-      matching::computer_supporting_value<1>::type
-      validity_matching_computer;
     typedef matching::Computer<utility::uinttypes::DynamicUint>
-      optimality_matching_computer;
+      matching_computer;
 
     std::list<Pairing> computeMatching(
       tournament::Tournament &&,

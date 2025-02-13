@@ -71,9 +71,9 @@ namespace swisssystems
        * is an eligible round pairing (where at least all players but one are
        * matched and no absolute criteria are violated).
        */
-      bool
-        matchingIsComplete(const validity_matching_computer &matchingComputer)
+      bool matchingIsComplete(const matching_computer &matchingComputer)
       {
+        bool encounteredUnmatchedPlayer{ };
         tournament::player_index vertexIndex{ };
         for (
           const tournament::player_index matchedIndex
@@ -81,7 +81,11 @@ namespace swisssystems
         {
           if (matchedIndex == vertexIndex++)
           {
-            return false;
+            if (encounteredUnmatchedPlayer)
+            {
+              return false;
+            }
+            encounteredUnmatchedPlayer = true;
           }
         }
         return true;
@@ -130,7 +134,7 @@ namespace swisssystems
        */
       template <bool max, typename Shift>
       void shiftEdgeWeight(
-        optimality_matching_computer::edge_weight &edgeWeight,
+        matching_computer::edge_weight &edgeWeight,
         const Shift shift)
       {
         if (max)
@@ -151,7 +155,7 @@ namespace swisssystems
        */
       template <bool max>
       void insertColorBits(
-        optimality_matching_computer::edge_weight &edgeWeight,
+        matching_computer::edge_weight &edgeWeight,
         const tournament::Player &player,
         const tournament::Player &opponent,
         const bool inCurrentScoreGroup,
@@ -201,26 +205,7 @@ namespace swisssystems
                 );
       }
 
-      typedef
-        utility::uinttypes::uint_least_for_value<
-          std::uintmax_t{ tournament::maxPoints } + 10u>
-        score_difference;
-      static_assert(
-        std::uintmax_t{ tournament::maxPoints } + 10u >= 10u,
-        "Overflow");
-
-      constexpr unsigned int scoreDifferenceShiftSize =
-        utility::typesizes
-            ::bitsToRepresent<unsigned int>(tournament::maxPlayers)
-          * 2u;
-      typedef
-        utility::uinttypes::uint_least<scoreDifferenceShiftSize>
-        score_difference_shift;
-      static_assert(
-        scoreDifferenceShiftSize >> 1
-          >= utility::typesizes
-              ::bitsToRepresent<unsigned int>(tournament::maxPlayers),
-        "Overflow");
+      typedef tournament::player_index score_group_shift;
 
       /**
        * Compute the basic edge weight between the two players. If max is true,
@@ -228,28 +213,24 @@ namespace swisssystems
        * instead.
        */
       template <bool max = false>
-      optimality_matching_computer::edge_weight
+      matching_computer::edge_weight
         computeEdgeWeight(
           const tournament::Player &higherPlayer,
           const tournament::Player &lowerPlayer,
-          const bool specialBrackets,
-          const bool finalBrackets,
-          const bool higherPlayerInCurrentBracket,
           const bool lowerPlayerInCurrentBracket,
+          const bool lowerPlayerInNextBracket,
           const tournament::Tournament &tournament,
-          const unsigned int playerCountBits,
-          const unsigned int nextScoreGroupPlayerCountBits,
-          const score_difference_shift scoreDifferenceShift,
-          const std::unordered_map<score_difference, score_difference_shift>
-            &scoreDifferenceShifts,
-          const tournament::points minScoreInBracket,
-          optimality_matching_computer::edge_weight &maxEdgeWeight)
+          const unsigned int scoreGroupSizeBits,
+          const score_group_shift scoreGroupsShift,
+          const std::unordered_map<tournament::points, score_group_shift>
+            &scoreGroupShifts,
+          matching_computer::edge_weight &maxEdgeWeight)
       {
         typename
             std::conditional<
               max,
               decltype(maxEdgeWeight),
-              optimality_matching_computer::edge_weight
+              matching_computer::edge_weight
             >::type
           result{ maxEdgeWeight };
 
@@ -262,99 +243,42 @@ namespace swisssystems
         }
 
         // Enforce completion requirement and bye eligibility.
-        if (specialBrackets)
-        {
-          result |=
-            max
-              ? 2u
-              : 1u
-                  + !eligibleForBye(higherPlayer, tournament)
-                  + !eligibleForBye(lowerPlayer, tournament);
-        }
+        result |=
+          max
+            ? 2u
+            : 1u
+                + !eligibleForBye(higherPlayer, tournament)
+                + !eligibleForBye(lowerPlayer, tournament);
 
         // Maximize the number of pairs in the current pairing bracket.
-        assert(playerCountBits);
-        shiftEdgeWeight<max>(result, playerCountBits);
-        result |= max ? !result : lowerPlayerInCurrentBracket;
+        assert(scoreGroupSizeBits);
+        shiftEdgeWeight<max>(result, scoreGroupSizeBits);
+        result |= max ? 0u : lowerPlayerInCurrentBracket;
 
-        // Minimize the pairing score difference in the current bracket.
-        shiftEdgeWeight<max>(result, scoreDifferenceShift);
+        // Maximize the scores paired in the current bracket.
+        shiftEdgeWeight<max>(result, scoreGroupsShift);
         if (!max && lowerPlayerInCurrentBracket)
         {
-          result +=
+          result |=
             ((result & 0u) | 1u)
-              << scoreDifferenceShifts.find(
-                    score_difference(
-                      higherPlayer.scoreWithAcceleration(tournament)
-                        - minScoreInBracket
-                    ) + 10u
+              << scoreGroupShifts.find(
+                    higherPlayer.scoreWithAcceleration(tournament)
                   )->second;
-          result +=
-            ((result & 0u) | 1u)
-              << scoreDifferenceShifts.find(
-                    score_difference(
-                      lowerPlayer.scoreWithAcceleration(tournament)
-                        - minScoreInBracket
-                    ) + 10u
-                  )->second;
-          result -=
-            ((result & 0u) | 1u)
-              << scoreDifferenceShifts.find(
-                  higherPlayer.scoreWithAcceleration(tournament)
-                    - lowerPlayer.scoreWithAcceleration(tournament))->second;
         }
 
-        if (!specialBrackets)
+        // Maximize the number of pairs in the next bracket.
+        shiftEdgeWeight<max>(result, scoreGroupSizeBits);
+        result |= max ? 0u : lowerPlayerInNextBracket;
+
+        // Maximize the scores paired in the next bracket.
+        shiftEdgeWeight<max>(result, scoreGroupsShift);
+        if (!max && lowerPlayerInNextBracket)
         {
-          assert(nextScoreGroupPlayerCountBits);
-
-          // Maximize the number of pairs in the next bracket.
-          if (finalBrackets)
-          {
-            shiftEdgeWeight<max>(
-              result,
-              std::max(playerCountBits, nextScoreGroupPlayerCountBits));
-            shiftEdgeWeight<max>(result, 3u);
-          }
-          else
-          {
-            shiftEdgeWeight<max>(result, nextScoreGroupPlayerCountBits);
-          }
           result |=
-            max ? 0u
-              : finalBrackets
-                ? 1u
-                    + !eligibleForBye(higherPlayer, tournament)
-                    + !eligibleForBye(lowerPlayer, tournament)
-              : !lowerPlayerInCurrentBracket;
-
-          // Maximize the pair scoring difference in the next bracket.
-          shiftEdgeWeight<max>(result, scoreDifferenceShift);
-          if (!max)
-          {
-            if (higherPlayerInCurrentBracket)
-            {
-              result |=
-                ((result & 0u) | 1u)
-                  << scoreDifferenceShifts.find(
-                        score_difference(
-                          higherPlayer.scoreWithAcceleration(tournament)
-                            - minScoreInBracket
-                        ) + 10u
-                      )->second;
-            }
-            if (lowerPlayerInCurrentBracket)
-            {
-              result +=
-                ((result & 0u) | 1u)
-                  << scoreDifferenceShifts.find(
-                        score_difference(
-                          lowerPlayer.scoreWithAcceleration(tournament)
-                            - minScoreInBracket
-                        ) + 10u
-                      )->second;
-            }
-          }
+            ((result & 0u) | 1u)
+              << scoreGroupShifts.find(
+                    higherPlayer.scoreWithAcceleration(tournament)
+                  )->second;
         }
 
         // Maximize color preference satisfaction.
@@ -363,12 +287,12 @@ namespace swisssystems
           lowerPlayer,
           higherPlayer,
           lowerPlayerInCurrentBracket,
-          playerCountBits);
+          scoreGroupSizeBits);
 
         if (tournament.playedRounds)
         {
           // Minimize downfloaters repeated from the previous round.
-          shiftEdgeWeight<max>(result, playerCountBits);
+          shiftEdgeWeight<max>(result, scoreGroupSizeBits);
           if (!max && lowerPlayerInCurrentBracket)
           {
             result |= getFloat(lowerPlayer, 1, tournament) == FLOAT_DOWN;
@@ -379,18 +303,20 @@ namespace swisssystems
           }
 
           // Minimize upfloaters repeated from the previous round.
-          shiftEdgeWeight<max>(result, playerCountBits);
-          result -=
-            !max
-              && lowerPlayerInCurrentBracket
-              && higherPlayer.scoreWithAcceleration(tournament)
-                  > lowerPlayer.scoreWithAcceleration(tournament)
-              && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP;
+          shiftEdgeWeight<max>(result, scoreGroupSizeBits);
+          if (!max)
+          {
+            result |=
+              !(lowerPlayerInCurrentBracket
+                  && higherPlayer.scoreWithAcceleration(tournament)
+                      > lowerPlayer.scoreWithAcceleration(tournament)
+                  && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP);
+          }
         }
         if (tournament.playedRounds > 1u)
         {
           // Minimize downfloaters repeated from two rounds before.
-          shiftEdgeWeight<max>(result, playerCountBits);
+          shiftEdgeWeight<max>(result, scoreGroupSizeBits);
           if (!max && lowerPlayerInCurrentBracket)
           {
             result |= getFloat(lowerPlayer, 2, tournament) == FLOAT_DOWN;
@@ -401,138 +327,100 @@ namespace swisssystems
           }
 
           // Minimize upfloaters repeated from two rounds before.
-          shiftEdgeWeight<max>(result, playerCountBits);
-          result -=
-            !max
-              && lowerPlayerInCurrentBracket
-              && higherPlayer.scoreWithAcceleration(tournament)
-                  > lowerPlayer.scoreWithAcceleration(tournament)
-              && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP;
+          shiftEdgeWeight<max>(result, scoreGroupSizeBits);
+          if (!max)
+          {
+            result |=
+              !(lowerPlayerInCurrentBracket
+                  && higherPlayer.scoreWithAcceleration(tournament)
+                      > lowerPlayer.scoreWithAcceleration(tournament)
+                  && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP);
+          }
         }
 
         if (tournament.playedRounds)
         {
-          // Minimize the score differences of downfloaters repeated from the
-          // previous round.
-          shiftEdgeWeight<max>(result, scoreDifferenceShift);
+          // Minimize the scores of downfloaters repeated from the previous
+          // round.
+          shiftEdgeWeight<max>(result, scoreGroupsShift);
           if (!max && lowerPlayerInCurrentBracket)
           {
             result +=
               ((result & 0u)
                 | (getFloat(lowerPlayer, 1, tournament) == FLOAT_DOWN)
-              ) << scoreDifferenceShifts.find(
-                      score_difference(
-                        lowerPlayer.scoreWithAcceleration(tournament)
-                          - minScoreInBracket
-                      ) + 10u
+              ) << scoreGroupShifts.find(
+                      lowerPlayer.scoreWithAcceleration(tournament)
                     )->second;
-            if (getFloat(higherPlayer, 1, tournament) == FLOAT_DOWN)
-            {
-              result +=
-                ((result & 0u) | 1u)
-                  << scoreDifferenceShifts.find(
-                        score_difference(
-                          higherPlayer.scoreWithAcceleration(tournament)
-                            - minScoreInBracket
-                        ) + 10u
-                      )->second;
-              if (
-                higherPlayer.scoreWithAcceleration(tournament)
-                  > lowerPlayer.scoreWithAcceleration(tournament))
-              {
-                result -=
-                  ((result & 0u) | 1u)
-                    << scoreDifferenceShifts.find(
-                          higherPlayer.scoreWithAcceleration(tournament)
-                            - lowerPlayer.scoreWithAcceleration(tournament)
-                        )->second;
-              }
-            }
+            result +=
+              ((result & 0u)
+                | (getFloat(higherPlayer, 1, tournament) == FLOAT_DOWN)
+              ) << scoreGroupShifts.find(
+                      higherPlayer.scoreWithAcceleration(tournament)
+                    )->second;
           }
 
-          // Minimize the score differences of upfloaters repeated from the
-          // previous round.
-          shiftEdgeWeight<max>(result, scoreDifferenceShift);
+          // Minimize the scores of the opponents of upfloaters repeated from
+          // the previous round.
+          shiftEdgeWeight<max>(result, scoreGroupsShift);
           if (
             !max
-              && lowerPlayerInCurrentBracket
-              && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP
-              && higherPlayer.scoreWithAcceleration(tournament)
-                  > lowerPlayer.scoreWithAcceleration(tournament))
+              && !(lowerPlayerInCurrentBracket
+                    && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP
+                    && higherPlayer.scoreWithAcceleration(tournament)
+                        > lowerPlayer.scoreWithAcceleration(tournament)))
           {
-            result -=
+            result |=
               ((result & 0u) | 1u)
-                << scoreDifferenceShifts.find(
+                << scoreGroupShifts.find(
                       higherPlayer.scoreWithAcceleration(tournament)
-                        - lowerPlayer.scoreWithAcceleration(tournament)
                     )->second;
           }
         }
         if (tournament.playedRounds > 1u)
         {
-          // Minimize the score differences of downfloaters repeated from two
-          // rounds before.
-          shiftEdgeWeight<max>(result, scoreDifferenceShift);
+          // Minimize the scores of downfloaters repeated from two rounds
+          // before.
+          shiftEdgeWeight<max>(result, scoreGroupsShift);
           if (!max && lowerPlayerInCurrentBracket)
           {
             result +=
               ((result & 0u)
                 | (getFloat(lowerPlayer, 2, tournament) == FLOAT_DOWN)
-              ) << scoreDifferenceShifts.find(
-                      score_difference(
-                        lowerPlayer.scoreWithAcceleration(tournament)
-                          - minScoreInBracket
-                      ) + 10u
+              ) << scoreGroupShifts.find(
+                      lowerPlayer.scoreWithAcceleration(tournament)
                     )->second;
-            if (getFloat(higherPlayer, 2, tournament) == FLOAT_DOWN)
-            {
-              result +=
-                ((result & 0u) | 1u)
-                  << scoreDifferenceShifts.find(
-                        score_difference(
-                          higherPlayer.scoreWithAcceleration(tournament)
-                            - minScoreInBracket
-                        ) + 10u
-                      )->second;
-              if (
-                higherPlayer.scoreWithAcceleration(tournament)
-                  > lowerPlayer.scoreWithAcceleration(tournament))
-              {
-                result -=
-                  ((result & 0u) | 1u)
-                    << scoreDifferenceShifts.find(
-                          higherPlayer.scoreWithAcceleration(tournament)
-                            - lowerPlayer.scoreWithAcceleration(tournament)
-                        )->second;
-              }
-            }
+            result +=
+              ((result & 0u)
+                | (getFloat(higherPlayer, 2, tournament) == FLOAT_DOWN)
+              ) << scoreGroupShifts.find(
+                      higherPlayer.scoreWithAcceleration(tournament)
+                    )->second;
           }
 
-          // Minimize the score differences of upfloaters repeated from two
+          // Minimize the scores of opponents of upfloaters repeated from two
           // rounds before.
-          shiftEdgeWeight<max>(result, scoreDifferenceShift);
+          shiftEdgeWeight<max>(result, scoreGroupsShift);
           if (
             !max
-              && lowerPlayerInCurrentBracket
-              && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP
-              && higherPlayer.scoreWithAcceleration(tournament)
-                  > lowerPlayer.scoreWithAcceleration(tournament))
+              && !(lowerPlayerInCurrentBracket
+                    && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP
+                    && higherPlayer.scoreWithAcceleration(tournament)
+                        > lowerPlayer.scoreWithAcceleration(tournament)))
           {
-            result -=
+            result |=
               ((result & 0u) | 1u)
-                << scoreDifferenceShifts.find(
+                << scoreGroupShifts.find(
                       higherPlayer.scoreWithAcceleration(tournament)
-                        - lowerPlayer.scoreWithAcceleration(tournament)
                     )->second;
           }
         }
 
         // Leave room for enforcing the ordering requirements for pairing
         // heterogeneous and homogeneous brackets.
-        shiftEdgeWeight<max>(result, playerCountBits);
+        shiftEdgeWeight<max>(result, scoreGroupSizeBits);
 
-        shiftEdgeWeight<max>(result, playerCountBits);
-        shiftEdgeWeight<max>(result, playerCountBits);
+        shiftEdgeWeight<max>(result, scoreGroupSizeBits);
+        shiftEdgeWeight<max>(result, scoreGroupSizeBits);
 
         shiftEdgeWeight<max>(result, 1u);
 
@@ -600,7 +488,7 @@ namespace swisssystems
        */
       void printChecklist(
         const tournament::Tournament &tournament,
-        const std::list<const tournament::Player *> &sortedPlayers,
+        const std::vector<const tournament::Player *> &sortedPlayers,
         std::ostream &ostream,
         const std::vector<const tournament::Player *> *const matching = nullptr)
       {
@@ -650,163 +538,43 @@ namespace swisssystems
        * larger player index, and the sub-vectors are indexed by the smaller
        * player index.
        */
-      std::vector<std::vector<optimality_matching_computer::edge_weight>>
+      std::vector<std::vector<matching_computer::edge_weight>>
       computeBaseEdgeWeights(
-        optimality_matching_computer::edge_weight &maxEdgeWeight,
+        matching_computer::edge_weight &maxEdgeWeight,
         const std::vector<const tournament::Player *> &playersByIndex,
         const tournament::player_index scoreGroupBegin,
         const tournament::player_index nextScoreGroupBegin,
-        const bool specialBrackets,
-        const bool finalBrackets,
-        const tournament::Tournament &tournament)
+        const tournament::player_index nextScoreGroupEnd,
+        const tournament::Tournament &tournament,
+        const unsigned int scoreGroupSizeBits,
+        const score_group_shift scoreGroupsShift,
+        const std::unordered_map<tournament::points, score_group_shift>
+          &scoreGroupShifts)
       {
-        // Get an upper bound on the number of occurences of each score
-        // difference in the current pairing bracket.
-        const tournament::points minScoreInBracket =
-          playersByIndex.back()->scoreWithAcceleration(tournament);
-        std::list<score_difference> scoreDifferences;
-        for (
-          tournament::player_index playerIndex = 0;
-          playerIndex < nextScoreGroupBegin;
-          ++playerIndex)
-        {
-          // Include score differences for downfloaters.
-          scoreDifferences.push_back(
-            score_difference(
-              playersByIndex[playerIndex]->scoreWithAcceleration(tournament)
-                - minScoreInBracket
-            ) + 10u
-          );
-          const tournament::player_index firstIndex =
-            std::max<tournament::player_index>(scoreGroupBegin, playerIndex + 1u
-            );
-          // Add score differences for non-downfloaters.
-          for (
-            tournament::player_index opponentIndex = firstIndex;
-            opponentIndex < nextScoreGroupBegin;
-            ++opponentIndex)
-          {
-            // Repeated score differences for a single player need only be
-            // counted once.
-            if (
-              opponentIndex <= firstIndex
-                || playersByIndex[opponentIndex]
-                      ->scoreWithAcceleration(tournament)
-                    < playersByIndex[opponentIndex - 1u]
-                        ->scoreWithAcceleration(tournament))
-            {
-              scoreDifferences.push_back(
-                score_difference(
-                  playersByIndex[playerIndex]->scoreWithAcceleration(tournament)
-                    - playersByIndex[opponentIndex]
-                        ->scoreWithAcceleration(tournament)));
-            }
-          }
-        }
-        scoreDifferences.sort();
-
-        // Determine the number of bits needed for each score difference.
-        score_difference_shift scoreDifferenceShift{ };
-        std::unordered_map<score_difference, score_difference_shift>
-          scoreDifferenceShifts;
-        tournament::player_index repeatedScores{ };
-        for (
-          decltype(scoreDifferences)::const_iterator nextIterator =
-            scoreDifferences.begin();
-          nextIterator != scoreDifferences.end();
-        )
-        {
-          const decltype(scoreDifferences)::const_iterator currentIterator =
-            nextIterator++;
-          ++repeatedScores;
-          if (
-            nextIterator == scoreDifferences.end()
-              || *currentIterator != *nextIterator)
-          {
-            const unsigned int newBits =
-              utility::typesizes::bitsToRepresent<unsigned int>(repeatedScores);
-            scoreDifferenceShifts[*currentIterator] = scoreDifferenceShift;
-            repeatedScores = 0;
-            scoreDifferenceShift += newBits;
-            assert(scoreDifferenceShift >= newBits);
-          }
-        }
-
-        // Determine the number of bits needed to represent the players in this
-        // score group and the next, respectively.
-        assert(scoreGroupBegin < nextScoreGroupBegin);
-        const unsigned int playerCountBits =
-          utility::typesizes::bitsToRepresent<unsigned int>(
-            nextScoreGroupBegin - scoreGroupBegin);
-        const unsigned int nextScoreGroupPlayerCountBits =
-          utility::typesizes::bitsToRepresent<unsigned int>(
-            playersByIndex.size() - nextScoreGroupBegin);
-
-        // Compute an edge weight upper bound.
-        computeEdgeWeight<true>(
-          *playersByIndex[0],
-          *playersByIndex[0],
-          specialBrackets,
-          finalBrackets,
-          true,
-          true,
-          tournament,
-          playerCountBits,
-          nextScoreGroupPlayerCountBits,
-          scoreDifferenceShift,
-          scoreDifferenceShifts,
-          minScoreInBracket,
-          maxEdgeWeight);
-
-        // Compute the base edge weights.
-        const auto edgeWeightComputer =
-          [&playersByIndex,
-            nextScoreGroupBegin,
-            specialBrackets,
-            finalBrackets,
-            &tournament,
-            playerCountBits,
-            nextScoreGroupPlayerCountBits,
-            scoreDifferenceShift,
-            &scoreDifferenceShifts,
-            minScoreInBracket,
-            &maxEdgeWeight
-          ](
-            const tournament::player_index smallerPlayerIndex,
-            const tournament::player_index largerPlayerIndex)
-          {
-            return
-              computeEdgeWeight(
-                *playersByIndex[smallerPlayerIndex],
-                *playersByIndex[largerPlayerIndex],
-                specialBrackets,
-                finalBrackets,
-                smallerPlayerIndex < nextScoreGroupBegin,
-                largerPlayerIndex < nextScoreGroupBegin,
-                tournament,
-                playerCountBits,
-                nextScoreGroupPlayerCountBits,
-                scoreDifferenceShift,
-                scoreDifferenceShifts,
-                minScoreInBracket,
-                maxEdgeWeight);
-          };
-
-        std::vector<std::vector<optimality_matching_computer::edge_weight>>
+        std::vector<std::vector<matching_computer::edge_weight>>
           result(playersByIndex.size());
 
         for (
-          tournament::player_index opponentIndex = scoreGroupBegin;
-          opponentIndex < playersByIndex.size();
-          ++opponentIndex)
+          tournament::player_index largerPlayerIndex = scoreGroupBegin;
+          largerPlayerIndex < playersByIndex.size();
+          ++largerPlayerIndex)
         {
           for (
-            tournament::player_index playerIndex = 0;
-            playerIndex < opponentIndex;
-            ++playerIndex)
+            tournament::player_index smallerPlayerIndex = 0;
+            smallerPlayerIndex < largerPlayerIndex;
+            ++smallerPlayerIndex)
           {
-            result[opponentIndex].emplace_back(
-              edgeWeightComputer(playerIndex, opponentIndex));
+            result[largerPlayerIndex].emplace_back(
+              computeEdgeWeight(
+                *playersByIndex[smallerPlayerIndex],
+                *playersByIndex[largerPlayerIndex],
+                largerPlayerIndex < nextScoreGroupBegin,
+                largerPlayerIndex > nextScoreGroupEnd,
+                tournament,
+                scoreGroupSizeBits,
+                scoreGroupsShift,
+                scoreGroupShifts,
+                maxEdgeWeight));
           }
         }
 
@@ -827,7 +595,7 @@ namespace swisssystems
     {
       // Filter out the absent players, and sort the remainder by score and
       // pairing ID.
-      std::list<const tournament::Player *> sortedPlayers;
+      std::vector<const tournament::Player *> sortedPlayers;
       for (tournament::Player &player : tournament.players)
       {
         if (player.isValid)
@@ -845,9 +613,12 @@ namespace swisssystems
           }
         }
       }
-      sortedPlayers.sort(
-        [&tournament](const tournament::Player *const player0,
-            const tournament::Player *const player1)
+      std::sort(
+        sortedPlayers.begin(),
+        sortedPlayers.end(),
+        [&tournament](
+          const tournament::Player *const player0,
+          const tournament::Player *const player1)
         {
           return
             tournament
@@ -855,13 +626,57 @@ namespace swisssystems
         }
       );
 
-      // Initialize a computer used to check whether the round pairing can be
-      // completed after pairing zero or more brackets.
-      validity_matching_computer validityMatchingComputer(
-        validity_matching_computer::size_type{ sortedPlayers.size() }
-          + (sortedPlayers.size() & 1u),
-        1u);
-      if (sortedPlayers.size() > ~validity_matching_computer::size_type{ })
+      // Calculate the number of bits needed to prioritize moved-down players.
+      score_group_shift scoreGroupsShift{ };
+      std::unordered_map<tournament::points, score_group_shift>
+        scoreGroupShifts;
+      tournament::player_index maxScoreGroupSize{ };
+      tournament::player_index repeatedScores{ };
+      for (
+        auto nextIterator = sortedPlayers.begin();
+        nextIterator != sortedPlayers.end();
+      )
+      {
+        const auto currentIterator = nextIterator++;
+        ++repeatedScores;
+        const tournament::points currentScore =
+          (*currentIterator)->scoreWithAcceleration(tournament);
+        if (
+          nextIterator == sortedPlayers.end()
+            || currentScore > (*nextIterator)->scoreWithAcceleration(tournament)
+        )
+        {
+          const unsigned int newBits =
+            utility::typesizes::bitsToRepresent<unsigned int>(repeatedScores);
+          scoreGroupShifts[currentScore] = scoreGroupsShift;
+          repeatedScores = 0;
+          scoreGroupsShift += newBits;
+          assert(scoreGroupsShift >= newBits);
+          maxScoreGroupSize = std::max(maxScoreGroupSize, repeatedScores);
+        }
+      }
+
+      const unsigned int scoreGroupSizeBits =
+        utility::typesizes::bitsToRepresent<unsigned int>(maxScoreGroupSize);
+
+      // Compute an edge weight upper bound.
+      matching_computer::edge_weight maxEdgeWeight{ 0u };
+      computeEdgeWeight<true>(
+        *sortedPlayers.front(),
+        *sortedPlayers.front(),
+        true,
+        false,
+        tournament,
+        scoreGroupSizeBits,
+        scoreGroupsShift,
+        scoreGroupShifts,
+        maxEdgeWeight);
+
+      // Initialize the matching computer used to optimize the pairings
+      matching_computer matchingComputer(sortedPlayers.size(), maxEdgeWeight);
+
+      // Set edge weights to enforce completability.
+      if (sortedPlayers.size() > ~matching_computer::size_type{ })
       {
         throw std::length_error("");
       }
@@ -870,11 +685,7 @@ namespace swisssystems
         playerIndex < sortedPlayers.size();
         ++playerIndex)
       {
-        validityMatchingComputer.addVertex();
-      }
-      if (sortedPlayers.size() & 1u)
-      {
-        validityMatchingComputer.addVertex();
+        matchingComputer.addVertex();
       }
 
       {
@@ -884,29 +695,32 @@ namespace swisssystems
           tournament::player_index opponentIndex{ };
           for (const tournament::Player *const opponent : sortedPlayers)
           {
-            if (player != opponent)
+            if (opponentIndex == playerIndex)
             {
-              validityMatchingComputer.setEdgeWeight(
-                playerIndex,
-                opponentIndex,
-                compatible(*player, *opponent, tournament));
+              break;
             }
-            ++opponentIndex;
-          }
-          if (sortedPlayers.size() & 1u)
-          {
-            validityMatchingComputer.setEdgeWeight(
+            matchingComputer.setEdgeWeight(
               playerIndex,
-              sortedPlayers.size(),
-              eligibleForBye(*player, tournament));
+              opponentIndex,
+              computeEdgeWeight(
+                *opponent,
+                *player,
+                false,
+                false,
+                tournament,
+                scoreGroupSizeBits,
+                scoreGroupsShift,
+                scoreGroupShifts,
+                maxEdgeWeight));
+            ++opponentIndex;
           }
           ++playerIndex;
         }
       }
 
       // Check whether a pairing is possible initially.
-      validityMatchingComputer.computeMatching();
-      if (!matchingIsComplete(validityMatchingComputer))
+      matchingComputer.computeMatching();
+      if (!matchingIsComplete(matchingComputer))
       {
         if (ostream)
         {
@@ -931,8 +745,8 @@ namespace swisssystems
       std::vector<const tournament::Player *> playersByIndex;
       /**
        * Given the index of a player among those in the current pairing bracket
-       * or the next, stores the index of the player in
-       * validityMatchingComputer, that is, the index in sortedPlayers.
+       * or the next, stores the index of the player in matchingComputer, that
+       * is, the index in sortedPlayers.
        */
       std::vector<tournament::player_index> vertexIndices;
       /**
@@ -951,14 +765,20 @@ namespace swisssystems
       }
 
       /**
-       * true if we are pairing the last pairing bracket or the PPB.
+       * Stores whether the player will be matched. The vector is indexed by
+       * index in sortedPlayers.
        */
-      bool specialBrackets = nextScoreGroupIterator == sortedPlayers.end();
+      std::vector<bool> matched(sortedPlayers.size());
 
       /**
        * The number of moved down players in the current pairing bracket.
        */
       tournament::player_index scoreGroupBegin{ };
+      /**
+       * The index of the first player in sortedPlayers from the current
+       * bracket's score group.
+       */
+      tournament::player_index scoreGroupBeginVertex{ };
 
       while (
         playersByIndex.size() > 1u
@@ -970,83 +790,62 @@ namespace swisssystems
         const tournament::player_index nextScoreGroupBegin =
           playersByIndex.size();
         /**
+         * The index of the first player in sortedPlayers from the next score
+         * group.
+         */
+        const tournament::player_index nextScoreGroupBeginVertex =
+          scoreGroupBeginVertex + (nextScoreGroupBegin - scoreGroupBegin);
+        /**
          * Save the iterator to the beginning of the next score group.
          */
         const decltype(sortedPlayers)::const_iterator scoreGroupIterator =
           nextScoreGroupIterator;
         while (
           nextScoreGroupIterator != sortedPlayers.end()
-            && (specialBrackets
-                  || (*nextScoreGroupIterator)
-                        ->scoreWithAcceleration(tournament)
-                      >= (*scoreGroupIterator)
-                          ->scoreWithAcceleration(tournament)))
+            && ((*nextScoreGroupIterator)->scoreWithAcceleration(tournament)
+                  >= (*scoreGroupIterator)->scoreWithAcceleration(tournament)))
         {
           playersByIndex.push_back(*nextScoreGroupIterator);
           vertexIndices.push_back(vertexIndices.back() + 1u);
           ++nextScoreGroupIterator;
         }
 
-        optimality_matching_computer::edge_weight maxEdgeWeight{ 0u };
-
         // Compute maxEdgeWeight, as well as the base edge weights.
-        std::vector<std::vector<optimality_matching_computer::edge_weight>>
+        std::vector<std::vector<matching_computer::edge_weight>>
             baseEdgeWeights =
           computeBaseEdgeWeights(
             maxEdgeWeight,
             playersByIndex,
             scoreGroupBegin,
             nextScoreGroupBegin,
-            specialBrackets,
-            nextScoreGroupIterator == sortedPlayers.end(),
-            tournament);
+            playersByIndex.size(),
+            tournament,
+            scoreGroupSizeBits,
+            scoreGroupsShift,
+            scoreGroupShifts);
 
-        // Initialize the matching computer used to optimize the pairing in the
+        // Update the matching computer for optimizing the pairing in the
         // current pairing bracket
-        optimality_matching_computer optimalityMatchingComputer(
-          playersByIndex.size(),
-          maxEdgeWeight);
-        if (playersByIndex.size() > ~optimality_matching_computer::size_type{ })
         {
-          throw std::length_error("");
-        }
-        for (
-          tournament::player_index playerIndex = 0;
-          playerIndex < playersByIndex.size();
-          ++playerIndex)
-        {
-          optimalityMatchingComputer.addVertex();
-        }
-
-        {
-          tournament::player_index opponentIndex{ };
+          auto opponentIterator = vertexIndices.begin();
           for (
-            const std::vector<optimality_matching_computer::edge_weight>
-                &opponentVector
+            const std::vector<matching_computer::edge_weight> &opponentVector
               : baseEdgeWeights)
           {
-            tournament::player_index playerIndex = 0;
+            const tournament::player_index opponentVertex = *opponentIterator;
+            auto playerIterator = vertexIndices.begin();
             for (
-              const optimality_matching_computer::edge_weight &edgeWeight
-                : opponentVector)
+              const matching_computer::edge_weight &edgeWeight : opponentVector)
             {
-              optimalityMatchingComputer.setEdgeWeight(
-                opponentIndex,
-                playerIndex,
+              matchingComputer.setEdgeWeight(
+                opponentVertex,
+                *playerIterator,
                 edgeWeight);
-              ++playerIndex;
+              ++playerIterator;
             }
-            ++opponentIndex;
+            ++opponentIterator;
           }
         }
-
-        /**
-         * The number of bits needed to represent the number of players in the
-         * current pairing bracket.
-         */
-        const unsigned int playerCountBits =
-          utility::typesizes::bitsToRepresent<unsigned int>(
-            nextScoreGroupBegin - scoreGroupBegin);
 
         /**
          * A function used to calculate an edge weight modified for pairing
@@ -1054,27 +853,26 @@ namespace swisssystems
          * preferences.
          */
         const auto edgeWeightComputer =
-          [&baseEdgeWeights, playerCountBits](
+          [&baseEdgeWeights, scoreGroupSizeBits](
             const tournament::player_index smallerPlayerIndex,
             const tournament::player_index largerPlayerIndex,
             const tournament::player_index smallerPlayerRemainderIndex,
             const tournament::player_index remainderPairs)
           {
-            optimality_matching_computer::edge_weight result =
+            matching_computer::edge_weight result =
               baseEdgeWeights[largerPlayerIndex][smallerPlayerIndex];
 
             if (result)
             {
-              optimality_matching_computer::edge_weight addend =
-                result & 0u;
+              matching_computer::edge_weight addend = result & 0u;
 
               // Minimize the number of exchanges.
               addend |= smallerPlayerRemainderIndex < remainderPairs;
 
               // Minimize the difference of the exchanged branch scoring
               // numbers.
-              addend <<= playerCountBits;
-              addend <<= playerCountBits;
+              addend <<= scoreGroupSizeBits;
+              addend <<= scoreGroupSizeBits;
               addend -= smallerPlayerRemainderIndex;
 
               // Leave room for optimizing based on which players are exchanged.
@@ -1086,15 +884,9 @@ namespace swisssystems
             return result;
           };
 
-        optimalityMatchingComputer.computeMatching();
+        matchingComputer.computeMatching();
 
-        auto stableMatching = optimalityMatchingComputer.getMatching();
-
-        /**
-         * Stores whether the player will be matched. The vector is indexed by
-         * player index (index within this pairing bracket).
-         */
-        std::vector<bool> matched(nextScoreGroupBegin);
+        auto stableMatching = matchingComputer.getMatching();
 
         // Choose the moved down players to pair in the current pairing bracket.
 
@@ -1136,9 +928,11 @@ namespace swisssystems
               ++movedDownPlayerIndex)
             {
               ++remainingMovedDownScoreGroupPlayers;
+              const tournament::player_index movedDownPlayerVertex =
+                vertexIndices[movedDownPlayerIndex];
               if (
-                stableMatching[movedDownPlayerIndex] >= scoreGroupBegin
-                  && stableMatching[movedDownPlayerIndex] < nextScoreGroupBegin)
+                stableMatching[movedDownPlayerVertex] >= scoreGroupBeginVertex
+                  && stableMatching[movedDownPlayerVertex] < nextScoreGroupBeginVertex)
               {
                 ++remainingMatchedMovedDownScoreGroupPlayers;
               }
@@ -1148,17 +942,18 @@ namespace swisssystems
           {
             continue;
           }
+          const tournament::player_index playerVertex = vertexIndices[playerIndex];
           if (
             remainingMovedDownScoreGroupPlayers
               <= remainingMatchedMovedDownScoreGroupPlayers)
           {
-            matched[playerIndex] = true;
+            matched[playerVertex] = true;
             continue;
           }
           --remainingMovedDownScoreGroupPlayers;
           if (
-            stableMatching[playerIndex] < scoreGroupBegin
-              || stableMatching[playerIndex] >= nextScoreGroupBegin)
+            stableMatching[playerVertex] < scoreGroupBeginVertex
+              || stableMatching[playerVertex] >= nextScoreGroupBeginVertex)
           {
             // Try to match the player.
             for (
@@ -1166,43 +961,43 @@ namespace swisssystems
               opponentIndex < nextScoreGroupBegin;
               ++opponentIndex)
             {
-              optimality_matching_computer::edge_weight edgeWeight =
+              matching_computer::edge_weight edgeWeight =
                 baseEdgeWeights[opponentIndex][playerIndex];
               if (edgeWeight)
               {
                 edgeWeight |= 1u;
-                optimalityMatchingComputer.setEdgeWeight(
-                  playerIndex,
-                  opponentIndex,
+                matchingComputer.setEdgeWeight(
+                  playerVertex,
+                  vertexIndices[opponentIndex],
                   std::move(edgeWeight));
               }
             }
 
-            optimalityMatchingComputer.computeMatching();
+            matchingComputer.computeMatching();
 
-            stableMatching = optimalityMatchingComputer.getMatching();
+            stableMatching = matchingComputer.getMatching();
           }
           if (
-            stableMatching[playerIndex] >= scoreGroupBegin
-              && stableMatching[playerIndex] < nextScoreGroupBegin)
+            stableMatching[playerVertex] >= scoreGroupBeginVertex
+              && stableMatching[playerVertex] < nextScoreGroupBeginVertex)
           {
             // Finalize the fact that this player will be matched.
-            matched[playerIndex] = true;
+            matched[playerVertex] = true;
             --remainingMatchedMovedDownScoreGroupPlayers;
             for (
               tournament::player_index opponentIndex = scoreGroupBegin;
               opponentIndex < nextScoreGroupBegin;
               ++opponentIndex)
             {
-              optimality_matching_computer::edge_weight edgeWeight =
+              matching_computer::edge_weight edgeWeight =
                 baseEdgeWeights[opponentIndex][playerIndex];
               if (edgeWeight)
               {
                 edgeWeight |= nextScoreGroupBegin - scoreGroupBegin;
                 ++edgeWeight;
-                optimalityMatchingComputer.setEdgeWeight(
-                  playerIndex,
-                  opponentIndex,
+                matchingComputer.setEdgeWeight(
+                  playerVertex,
+                  vertexIndices[opponentIndex],
                   std::move(edgeWeight));
               }
             }
@@ -1215,50 +1010,48 @@ namespace swisssystems
           playerIndex < scoreGroupBegin;
           ++playerIndex)
         {
-          if (!matched[playerIndex])
+          const tournament::player_index playerVertex = vertexIndices[playerIndex];
+          if (!matched[playerVertex])
           {
             continue;
           }
-          optimality_matching_computer::edge_weight addend =
+          matching_computer::edge_weight addend =
             (maxEdgeWeight & 0u) | playersByIndex.size();
           for (
             tournament::player_index opponentIndex = nextScoreGroupBegin - 1u;
             opponentIndex >= scoreGroupBegin;
             --opponentIndex)
           {
-            if (matched[opponentIndex])
+            const tournament::player_index opponentVertex = vertexIndices[opponentIndex];
+            if (matched[opponentVertex])
             {
               continue;
             }
-            optimality_matching_computer::edge_weight edgeWeight =
+            matching_computer::edge_weight edgeWeight =
               baseEdgeWeights[opponentIndex][playerIndex];
             if (edgeWeight)
             {
               edgeWeight += addend;
-              optimalityMatchingComputer.setEdgeWeight(
-                playerIndex,
-                opponentIndex,
+              matchingComputer.setEdgeWeight(
+                playerVertex,
+                opponentVertex,
                 std::move(edgeWeight));
               ++addend;
             }
           }
 
-          optimalityMatchingComputer.computeMatching();
-          stableMatching = optimalityMatchingComputer.getMatching();
+          matchingComputer.computeMatching();
+          stableMatching = matchingComputer.getMatching();
 
           // Finalize the pairing.
-          const tournament::player_index matchIndex =
-            stableMatching[playerIndex];
-          matched[matchIndex] = true;
+          const tournament::player_index matchVertex =
+            stableMatching[playerVertex];
+          matched[matchVertex] = true;
           finalizePair(
-            playerIndex,
-            matchIndex,
-            optimalityMatchingComputer,
+            playerVertex,
+            matchVertex,
+            matchingComputer,
             maxEdgeWeight);
-          finalizePair(
-            vertexIndices[playerIndex],
-            vertexIndices[matchIndex],
-            validityMatchingComputer);
         }
 
         /**
@@ -1279,12 +1072,13 @@ namespace swisssystems
           playerIndex < nextScoreGroupBegin;
           ++playerIndex)
         {
-          if (stableMatching[playerIndex] < scoreGroupBegin)
+          if (stableMatching[playerIndex] < scoreGroupBeginVertex)
           {
             continue;
           }
           remainder.push_back(playerIndex);
-          if (stableMatching[playerIndex] < playerIndex)
+          const tournament::player_index playerVertex = vertexIndices[playerIndex];
+          if (stableMatching[playerVertex] < playerVertex)
           {
             ++remainderPairs;
           }
@@ -1300,6 +1094,7 @@ namespace swisssystems
         // of exchanged BSNs.
         for (const tournament::player_index opponentIndex : remainder)
         {
+          const tournament::player_index opponentVertex = vertexIndices[opponentIndex];
           tournament::player_index playerRemainderIndex{ };
           for (const tournament::player_index playerIndex : remainder)
           {
@@ -1307,9 +1102,9 @@ namespace swisssystems
             {
               break;
             }
-            optimalityMatchingComputer.setEdgeWeight(
-              playerIndex,
-              opponentIndex,
+            matchingComputer.setEdgeWeight(
+              vertexIndices[playerIndex],
+              opponentVertex,
               edgeWeightComputer(
                 playerIndex,
                 opponentIndex,
@@ -1319,8 +1114,8 @@ namespace swisssystems
           }
         }
 
-        optimalityMatchingComputer.computeMatching();
-        stableMatching = optimalityMatchingComputer.getMatching();
+        matchingComputer.computeMatching();
+        stableMatching = matchingComputer.getMatching();
 
         /**
          * The number of exchanges that must be made.
@@ -1332,9 +1127,10 @@ namespace swisssystems
           {
             break;
           }
+          const tournament::player_index playerVertex = vertexIndices[playerIndex];
           exchangeCount +=
-            stableMatching[playerIndex] <= playerIndex
-              || stableMatching[playerIndex] >= nextScoreGroupBegin;
+            stableMatching[playerVertex] <= playerVertex
+              || stableMatching[playerVertex] >= nextScoreGroupBeginVertex;
         }
 
         // Select lower players from the higher group to be exchanged where
@@ -1352,13 +1148,14 @@ namespace swisssystems
           decltype(remainder)::const_iterator opponentIterator = playerIterator;
           --playerRemainderIndex;
           --playerIterator;
+          const tournament::player_index playerVertex = vertexIndices[*playerIterator];
           if (
-            stableMatching[*playerIterator] > *playerIterator
-              && stableMatching[*playerIterator] < nextScoreGroupBegin)
+            stableMatching[playerVertex] > playerVertex
+              && stableMatching[playerVertex] < nextScoreGroupBeginVertex)
           {
             while (opponentIterator != remainder.end())
             {
-              optimality_matching_computer::edge_weight edgeWeight =
+              matching_computer::edge_weight edgeWeight =
                 edgeWeightComputer(
                   *playerIterator,
                   *opponentIterator,
@@ -1367,22 +1164,22 @@ namespace swisssystems
               if (edgeWeight)
               {
                 edgeWeight -= 1u;
-                optimalityMatchingComputer.setEdgeWeight(
-                  *playerIterator,
-                  *opponentIterator,
+                matchingComputer.setEdgeWeight(
+                  playerVertex,
+                  vertexIndices[*opponentIterator],
                   std::move(edgeWeight));
               }
               ++opponentIterator;
             }
 
-            optimalityMatchingComputer.computeMatching();
+            matchingComputer.computeMatching();
 
-            stableMatching = optimalityMatchingComputer.getMatching();
+            stableMatching = matchingComputer.getMatching();
           }
 
           const bool exchange =
-            stableMatching[*playerIterator] <= *playerIterator
-              || stableMatching[*playerIterator] >= nextScoreGroupBegin;
+            stableMatching[playerVertex] <= playerVertex
+              || stableMatching[playerVertex] >= nextScoreGroupBeginVertex;
 
           exchangesRemaining -= exchange;
 
@@ -1395,9 +1192,9 @@ namespace swisssystems
             {
               baseEdgeWeights[*opponentIterator][*playerIterator] &= 0u;
             }
-            optimalityMatchingComputer.setEdgeWeight(
-              *playerIterator,
-              *opponentIterator,
+            matchingComputer.setEdgeWeight(
+              playerVertex,
+              vertexIndices[*opponentIterator],
               edgeWeightComputer(
                 *playerIterator,
                 *opponentIterator,
@@ -1417,9 +1214,10 @@ namespace swisssystems
           playerIterator != remainder.end() && exchangesRemaining > 1u;
           ++playerIterator)
         {
+          const tournament::player_index playerVertex = vertexIndices[*playerIterator];
           const bool alreadyExchanged =
-            stableMatching[*playerIterator] > *playerIterator
-              && stableMatching[*playerIterator] < nextScoreGroupBegin;
+            stableMatching[playerVertex] > playerVertex
+              && stableMatching[playerVertex] < nextScoreGroupBeginVertex;
           if (!alreadyExchanged)
           {
             // Update edge weights to determine whether the current player
@@ -1430,7 +1228,7 @@ namespace swisssystems
               opponentIterator != remainder.end();
               ++opponentIterator)
             {
-              optimality_matching_computer::edge_weight edgeWeight =
+              matching_computer::edge_weight edgeWeight =
                 edgeWeightComputer(
                   *playerIterator,
                   *opponentIterator,
@@ -1439,21 +1237,21 @@ namespace swisssystems
               if (edgeWeight)
               {
                 edgeWeight += 1u;
-                optimalityMatchingComputer.setEdgeWeight(
-                  *playerIterator,
-                  *opponentIterator,
+                matchingComputer.setEdgeWeight(
+                  playerVertex,
+                  vertexIndices[*opponentIterator],
                   std::move(edgeWeight));
               }
             }
 
-            optimalityMatchingComputer.computeMatching();
+            matchingComputer.computeMatching();
 
-            stableMatching = optimalityMatchingComputer.getMatching();
+            stableMatching = matchingComputer.getMatching();
           }
 
           const bool exchange =
-            stableMatching[*playerIterator] > *playerIterator
-              && stableMatching[*playerIterator] < nextScoreGroupBegin;
+            stableMatching[playerVertex] > playerVertex
+              && stableMatching[playerVertex] < nextScoreGroupBeginVertex;
 
           if (exchange)
           {
@@ -1468,9 +1266,9 @@ namespace swisssystems
               ++opponentIterator)
             {
               baseEdgeWeights[*playerIterator][*opponentIterator] &= 0u;
-              optimalityMatchingComputer.setEdgeWeight(
-                *playerIterator,
-                *opponentIterator,
+              matchingComputer.setEdgeWeight(
+                playerVertex,
+                vertexIndices[*opponentIterator],
                 baseEdgeWeights[*playerIterator][*opponentIterator]);
             }
 
@@ -1480,9 +1278,9 @@ namespace swisssystems
               ++opponentIndex)
             {
               baseEdgeWeights[opponentIndex][*playerIterator] &= 0u;
-              optimalityMatchingComputer.setEdgeWeight(
-                *playerIterator,
-                opponentIndex,
+              matchingComputer.setEdgeWeight(
+                playerVertex,
+                vertexIndices[opponentIndex],
                 baseEdgeWeights[opponentIndex][*playerIterator]);
             }
           }
@@ -1495,9 +1293,9 @@ namespace swisssystems
               opponentIterator != remainder.end();
               ++opponentIterator)
             {
-              optimalityMatchingComputer.setEdgeWeight(
-                *playerIterator,
-                *opponentIterator,
+              matchingComputer.setEdgeWeight(
+                playerVertex,
+                vertexIndices[*opponentIterator],
                 edgeWeightComputer(
                   *playerIterator,
                   *opponentIterator,
@@ -1517,25 +1315,28 @@ namespace swisssystems
           playerIterator != remainder.end();
           ++playerIterator)
         {
+          const tournament::player_index playerVertex = vertexIndices[*playerIterator];
           for (
             decltype(remainder)::const_iterator opponentIterator =
               std::next(playerIterator, 1);
             opponentIterator != remainder.end();
             ++opponentIterator)
           {
+            const tournament::player_index opponentVertex =
+              vertexIndices[*opponentIterator];
             if (
-              stableMatching[*playerIterator] <= *playerIterator
-                || stableMatching[*playerIterator] >= nextScoreGroupBegin
-                || (stableMatching[*opponentIterator] > *opponentIterator
-                      && stableMatching[*opponentIterator] < nextScoreGroupBegin
+              stableMatching[playerVertex] <= playerVertex
+                || stableMatching[playerVertex] >= nextScoreGroupBeginVertex
+                || (stableMatching[opponentVertex] > opponentVertex
+                      && stableMatching[opponentVertex] < nextScoreGroupBeginVertex
                     )
             )
             {
               baseEdgeWeights[*opponentIterator][*playerIterator] &= 0u;
             }
-            optimalityMatchingComputer.setEdgeWeight(
-              *playerIterator,
-              *opponentIterator,
+            matchingComputer.setEdgeWeight(
+              playerVertex,
+              opponentVertex,
               baseEdgeWeights[*opponentIterator][*playerIterator]);
           }
           ++remainderIndex;
@@ -1546,9 +1347,10 @@ namespace swisssystems
         remainderIndex = 0;
         for (const tournament::player_index playerIndex : remainder)
         {
+          const tournament::player_index playerVertex = vertexIndices[playerIndex];
           if (
-            stableMatching[playerIndex] > playerIndex
-              && stableMatching[playerIndex] < nextScoreGroupBegin)
+            stableMatching[playerVertex] > playerVertex
+              && stableMatching[playerVertex] < nextScoreGroupBeginVertex)
           {
             // Set edge weights to prioritize higher players.
             tournament::player_index addend{ };
@@ -1558,69 +1360,45 @@ namespace swisssystems
               opponentIterator != remainder.rend();
               ++opponentIterator)
             {
+              const tournament::player_index opponentVertex =
+                vertexIndices[*opponentIterator];
               if (
-                *opponentIterator <= playerIndex || matched[*opponentIterator])
+                *opponentIterator <= playerIndex || matched[opponentVertex])
               {
                 continue;
               }
-              optimality_matching_computer::edge_weight edgeWeight =
+              matching_computer::edge_weight edgeWeight =
                 baseEdgeWeights[*opponentIterator][playerIndex];
               if (edgeWeight)
               {
                 edgeWeight += addend;
-                optimalityMatchingComputer.setEdgeWeight(
-                  playerIndex,
-                  *opponentIterator,
+                matchingComputer.setEdgeWeight(
+                  playerVertex,
+                  opponentVertex,
                   std::move(edgeWeight));
               }
               ++addend;
             }
 
-            optimalityMatchingComputer.computeMatching();
+            matchingComputer.computeMatching();
 
-            stableMatching = optimalityMatchingComputer.getMatching();
+            stableMatching = matchingComputer.getMatching();
 
             // Finalize the pairing.
-            const tournament::player_index matchIndex =
-              stableMatching[playerIndex];
-            matched[playerIndex] = true;
-            matched[matchIndex] = true;
+            const tournament::player_index matchVertex =
+              stableMatching[playerVertex];
+            matched[playerVertex] = true;
+            matched[matchVertex] = true;
             finalizePair(
-              playerIndex,
-              matchIndex,
-              optimalityMatchingComputer,
+              playerVertex,
+              matchVertex,
+              matchingComputer,
               maxEdgeWeight);
-            finalizePair(
-              vertexIndices[playerIndex],
-              vertexIndices[matchIndex],
-              validityMatchingComputer);
           }
           ++remainderIndex;
         }
 
-        if (!specialBrackets)
-        {
-          // Check whether the selected downfloaters allow completion of the
-          // round pairing.
-          validityMatchingComputer.computeMatching();
-          if (!matchingIsComplete(validityMatchingComputer))
-          {
-            // This bracket is the PPB. Repair it.
-            playersByIndex.erase(
-              playersByIndex.begin() + nextScoreGroupBegin,
-              playersByIndex.end());
-            vertexIndices.erase(
-              vertexIndices.begin() + nextScoreGroupBegin,
-              vertexIndices.end());
-            nextScoreGroupIterator = scoreGroupIterator;
-            specialBrackets = true;
-            continue;
-          }
-        }
-
         // Compute the new values for the next pairing bracket.
-        specialBrackets = nextScoreGroupIterator == sortedPlayers.end();
-
         std::vector<const tournament::Player *> newPlayersByIndex;
         std::vector<tournament::player_index> newVertexIndices;
         scoreGroupBegin = 0;
@@ -1629,12 +1407,13 @@ namespace swisssystems
           playerIndex < playersByIndex.size();
           ++playerIndex)
         {
-          if (playerIndex < nextScoreGroupBegin && matched[playerIndex])
+          const tournament::player_index playerVertex = vertexIndices[playerIndex];
+          if (playerIndex < nextScoreGroupBegin && matched[playerVertex])
           {
             // Save the pair in matchingById.
             matchingById[playersByIndex[playerIndex]->id] =
-              playersByIndex[stableMatching[playerIndex]];
-            matchingById[playersByIndex[stableMatching[playerIndex]]->id] =
+              sortedPlayers[stableMatching[playerVertex]];
+            matchingById[sortedPlayers[stableMatching[playerVertex]]->id] =
               playersByIndex[playerIndex];
           }
           else
@@ -1651,6 +1430,7 @@ namespace swisssystems
 
         playersByIndex = std::move(newPlayersByIndex);
         vertexIndices = std::move(newVertexIndices);
+        scoreGroupBeginVertex = nextScoreGroupBeginVertex;
       }
 
       // Generate the list of Pairings.

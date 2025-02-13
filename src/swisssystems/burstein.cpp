@@ -634,7 +634,7 @@ namespace swisssystems
 
       void printChecklist(
         const tournament::Tournament &tournament,
-        const std::list<const tournament::Player *> &sortedPlayers,
+        const std::vector<const tournament::Player *> &sortedPlayers,
         std::ostream &ostream,
         std::vector<MetricScores> &metricScores,
         const tournament::Player *const bye = nullptr,
@@ -703,7 +703,7 @@ namespace swisssystems
     {
       // Compute tiebreak scores for each player, and sort them into scoregroups
       // and within scoregroups.
-      std::list<const tournament::Player *> sortedPlayers;
+      std::vector<const tournament::Player *> sortedPlayers;
       std::vector<adjusted_score> adjustedScores;
       for (tournament::Player &player : tournament.players)
       {
@@ -746,7 +746,9 @@ namespace swisssystems
       {
         metricScores.emplace_back(player, tournament, adjustedScores);
       }
-      sortedPlayers.sort(
+      std::sort(
+        sortedPlayers.begin(),
+        sortedPlayers.end(),
         [&metricScores,&tournament](
           const tournament::Player *const player0,
           const tournament::Player *const player1)
@@ -765,12 +767,11 @@ namespace swisssystems
 
       // Choose the player to receive the bye, and add the bye to result. Do not
       // include the bye player in the vector of vertices.
-      std::list<const tournament::Player *>::iterator byeIterator;
+      std::vector<const tournament::Player *>::iterator byeIterator;
       const tournament::Player *bye{ };
       if (sortedPlayers.size() & 1u)
       {
-        std::list<const tournament::Player *>::iterator playerIterator =
-          sortedPlayers.end();
+        auto playerIterator = sortedPlayers.end();
         bool eligibleForBye;
         do
         {

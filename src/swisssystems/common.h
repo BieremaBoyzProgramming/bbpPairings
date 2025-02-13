@@ -163,7 +163,7 @@ namespace swisssystems
     const std::deque<std::string> &,
     const std::function<std::deque<std::string>(const tournament::Player &)> &,
     const tournament::Tournament &,
-    const std::list<const tournament::Player *> &);
+    const std::vector<const tournament::Player *> &);
 
   /**
    * Set the weight of the edge between the two vertices to defaultEdgeWeight,
