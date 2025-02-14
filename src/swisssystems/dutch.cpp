@@ -649,10 +649,10 @@ namespace swisssystems
           const unsigned int newBits =
             utility::typesizes::bitsToRepresent<unsigned int>(repeatedScores);
           scoreGroupShifts[currentScore] = scoreGroupsShift;
+          maxScoreGroupSize = std::max(maxScoreGroupSize, repeatedScores);
           repeatedScores = 0;
           scoreGroupsShift += newBits;
           assert(scoreGroupsShift >= newBits);
-          maxScoreGroupSize = std::max(maxScoreGroupSize, repeatedScores);
         }
       }
 
@@ -1072,12 +1072,12 @@ namespace swisssystems
           playerIndex < nextScoreGroupBegin;
           ++playerIndex)
         {
-          if (stableMatching[playerIndex] < scoreGroupBeginVertex)
+          const tournament::player_index playerVertex = vertexIndices[playerIndex];
+          if (stableMatching[playerVertex] < scoreGroupBeginVertex)
           {
             continue;
           }
           remainder.push_back(playerIndex);
-          const tournament::player_index playerVertex = vertexIndices[playerIndex];
           if (stableMatching[playerVertex] < playerVertex)
           {
             ++remainderPairs;
