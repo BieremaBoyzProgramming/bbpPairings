@@ -633,8 +633,8 @@ namespace swisssystems
       tournament::player_index maxScoreGroupSize{ };
       tournament::player_index repeatedScores{ };
       for (
-        auto nextIterator = sortedPlayers.begin();
-        nextIterator != sortedPlayers.end();
+        auto nextIterator = sortedPlayers.rbegin();
+        nextIterator != sortedPlayers.rend();
       )
       {
         const auto currentIterator = nextIterator++;
@@ -642,8 +642,8 @@ namespace swisssystems
         const tournament::points currentScore =
           (*currentIterator)->scoreWithAcceleration(tournament);
         if (
-          nextIterator == sortedPlayers.end()
-            || currentScore > (*nextIterator)->scoreWithAcceleration(tournament)
+          nextIterator == sortedPlayers.rend()
+            || currentScore < (*nextIterator)->scoreWithAcceleration(tournament)
         )
         {
           const unsigned int newBits =
