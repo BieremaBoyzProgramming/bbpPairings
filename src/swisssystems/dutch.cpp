@@ -716,6 +716,7 @@ namespace swisssystems
                               + !eligibleForBye(*player, tournament)
                               + !eligibleForBye(*opponent, tournament))
                             << scoreGroupsShift
+                          // Minimize bye assignee score
                           | (scoreGroupShifts.find(playerScore)->second
                               + scoreGroupShifts.find(
                                     opponent->scoreWithAcceleration(tournament)
