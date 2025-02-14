@@ -208,13 +208,12 @@ This program is believed to achieve a theoretical runtime that is O(n^3) for
 pairing a single round using the Burstein system.
 
 For the Dutch system, pairing a round is believed to take time
-O(n^3 * s * (d + s) * log n), where s is the number of occupied score groups
-in the current round and d is the number of distinct score differences between
-two players in the round. Note that if the point system (the number of points
-for wins and for draws) is treated as constant and there is no acceleration,
-then d and s are both O(r), since the point values are rational numbers, and in
-that case, the runtime is O(n^3 * r^2 * log n). If we also assume that r is
-O(log n), then the runtime is O(n^3 * (log n)^3).
+O(n^3 * s^2 * log n), where s is the number of occupied score groups
+in the current round. Note that if the point system (the number of points for
+wins and for draws) is treated as constant and there is no acceleration, then s
+is O(r), since the point values are rational numbers, and in that case, the
+runtime is O(n^3 * r^2 * log n). If we also assume that r is O(log n), then the
+runtime is O(n^3 * (log n)^3).
 
 The core of the pairing engine is an application of the simpler of the two
 weighted matching algorithms exposited in "An O(EV log V) Algorithm for Finding
