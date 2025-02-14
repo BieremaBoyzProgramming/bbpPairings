@@ -304,12 +304,11 @@ namespace swisssystems
 
           // Minimize upfloaters repeated from the previous round.
           shiftEdgeWeight<max>(result, scoreGroupSizeBits);
-          if (!max)
+          if (!max && lowerPlayerInCurrentBracket)
           {
             result |=
-              !(lowerPlayerInCurrentBracket
-                  && higherPlayer.scoreWithAcceleration(tournament)
-                      > lowerPlayer.scoreWithAcceleration(tournament)
+              !(higherPlayer.scoreWithAcceleration(tournament)
+                    > lowerPlayer.scoreWithAcceleration(tournament)
                   && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP);
           }
         }
@@ -328,12 +327,11 @@ namespace swisssystems
 
           // Minimize upfloaters repeated from two rounds before.
           shiftEdgeWeight<max>(result, scoreGroupSizeBits);
-          if (!max)
+          if (!max && lowerPlayerInCurrentBracket)
           {
             result |=
-              !(lowerPlayerInCurrentBracket
-                  && higherPlayer.scoreWithAcceleration(tournament)
-                      > lowerPlayer.scoreWithAcceleration(tournament)
+              !(higherPlayer.scoreWithAcceleration(tournament)
+                    > lowerPlayer.scoreWithAcceleration(tournament)
                   && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP);
           }
         }
@@ -364,8 +362,8 @@ namespace swisssystems
           shiftEdgeWeight<max>(result, scoreGroupsShift);
           if (
             !max
-              && !(lowerPlayerInCurrentBracket
-                    && getFloat(lowerPlayer, 1, tournament) == FLOAT_UP
+              && lowerPlayerInCurrentBracket
+              && !(getFloat(lowerPlayer, 1, tournament) == FLOAT_UP
                     && higherPlayer.scoreWithAcceleration(tournament)
                         > lowerPlayer.scoreWithAcceleration(tournament)))
           {
@@ -402,8 +400,8 @@ namespace swisssystems
           shiftEdgeWeight<max>(result, scoreGroupsShift);
           if (
             !max
-              && !(lowerPlayerInCurrentBracket
-                    && getFloat(lowerPlayer, 2, tournament) == FLOAT_UP
+              && lowerPlayerInCurrentBracket
+              && !(getFloat(lowerPlayer, 2, tournament) == FLOAT_UP
                     && higherPlayer.scoreWithAcceleration(tournament)
                         > lowerPlayer.scoreWithAcceleration(tournament)))
           {
@@ -544,7 +542,6 @@ namespace swisssystems
         const std::vector<const tournament::Player *> &playersByIndex,
         const tournament::player_index scoreGroupBegin,
         const tournament::player_index nextScoreGroupBegin,
-        const tournament::player_index nextScoreGroupEnd,
         const tournament::Tournament &tournament,
         const unsigned int scoreGroupSizeBits,
         const score_group_shift scoreGroupsShift,
@@ -569,7 +566,7 @@ namespace swisssystems
                 *playersByIndex[smallerPlayerIndex],
                 *playersByIndex[largerPlayerIndex],
                 largerPlayerIndex < nextScoreGroupBegin,
-                largerPlayerIndex > nextScoreGroupEnd,
+                largerPlayerIndex >= nextScoreGroupBegin,
                 tournament,
                 scoreGroupSizeBits,
                 scoreGroupsShift,
@@ -818,7 +815,6 @@ namespace swisssystems
             playersByIndex,
             scoreGroupBegin,
             nextScoreGroupBegin,
-            playersByIndex.size(),
             tournament,
             scoreGroupSizeBits,
             scoreGroupsShift,
