@@ -165,14 +165,16 @@ which Swiss system to use for pairing is required.
 
 The acceptable syntax forms for running BBP Pairings are:
 bbpPairings.exe [-r]
-bbpPairings.exe [-r] (--burstein | --dutch) input-file -c [-l [check-list-file]]
-bbpPairings.exe [-r] (--burstein | --dutch) input-file -p [output-file] [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dutch) [input-file] -c [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dutch) [input-file] -p [output-file] [-l [check-list-file]]
 bbpPairings.exe [-r] (--burstein | --dutch) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l [check-list-file]]
 
 If bbpPairings.exe is not in the search path, the path to the executable should
 be substituted for bbpPairings.exe. For example, on Unix-based systems, if
 bbpPairings.exe is in the current directory, you could replace bbpPairings.exe
-with ./bbpPairings.exe
+with ./bbpPairings.exe.
+
+If no input-file is given it is read from stdin.
 
 Error codes
 -----------

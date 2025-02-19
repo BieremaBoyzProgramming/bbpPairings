@@ -174,32 +174,51 @@ int main(const int argc, char**const argv)
 
     const char *inputFilename;
 #ifndef OMIT_CHECKER
-    const bool checkPairings =
+    const bool checkPairingsWithoutFilename =
+      argc >= 1 + processedArgCount
+        && argv[processedArgCount] == std::string("-c");
+    bool checkPairings =
       argc >= 2 + processedArgCount
         && argv[1u + processedArgCount] == std::string("-c");
-    if (checkPairings)
+    if (checkPairingsWithoutFilename)
+    {
+      inputFilename = "(stdin)";
+      checkPairings = true;
+      processedArgCount += 1;
+    }
+    else if (checkPairings)
     {
       inputFilename = argv[processedArgCount];
       processedArgCount += 2;
     }
 #endif
 
-    std::string outputFilename;
-    const bool pairingsOutputFile =
-      argc >= 3 + processedArgCount
-        && argv[2u + processedArgCount] != std::string("-l");
-    const bool doPairings =
-      argc >= 2 + processedArgCount + pairingsOutputFile
+    const bool doPairingsWithoutFilename =
+      argc >= 1 + processedArgCount
+        && argv[processedArgCount] == std::string("-p");
+    bool doPairings =
+      argc >= 2 + processedArgCount
         && argv[1u + processedArgCount] == std::string("-p");
-    if (doPairings)
+    if (doPairingsWithoutFilename)
+    {
+      inputFilename = "(stdin)";
+      doPairings = true;
+      processedArgCount += 1;
+    }
+    else if (doPairings)
     {
       inputFilename = argv[processedArgCount];
       processedArgCount += 2;
-      if (pairingsOutputFile)
-      {
-        outputFilename = argv[processedArgCount];
-        ++processedArgCount;
-      }
+    }
+    const bool pairingsOutputFile =
+      doPairings
+        && argc >= 1 + processedArgCount
+        && argv[processedArgCount] != std::string("-l");
+    std::string outputFilename;
+    if (pairingsOutputFile)
+    {
+      outputFilename = argv[processedArgCount];
+      ++processedArgCount;
     }
 
 #ifndef OMIT_GENERATOR
@@ -305,14 +324,14 @@ int main(const int argc, char**const argv)
         << argv[0]
         << " [-r] "
         << swissSystemSyntax
-        << " input-file -c "
+        << " [input-file] -c "
         << checklistString
         << std::endl
 #endif
         << argv[0]
         << " [-r] "
         << swissSystemSyntax
-        << " input-file -p [output-file] "
+        << " [input-file] -p [output-file] "
         << checklistString
         << std::endl
 #ifndef OMIT_GENERATOR
@@ -336,7 +355,6 @@ int main(const int argc, char**const argv)
     if (checkPairings)
     {
       // Input a tournament and check that the pairings are correct.
-      std::ifstream inputStream(inputFilename);
 
       try
       {
@@ -344,7 +362,15 @@ int main(const int argc, char**const argv)
         tournament::Tournament tournament;
         try
         {
-          tournament = fileformats::trf::readFile(inputStream, false);
+          if (checkPairingsWithoutFilename)
+          {
+            tournament = fileformats::trf::readFile(std::cin, false);
+          }
+          else
+          {
+            std::ifstream inputStream(inputFilename);
+            tournament = fileformats::trf::readFile(inputStream, false);
+          }
         }
         catch (const fileformats::FileFormatException &exception)
         {
@@ -432,13 +458,19 @@ int main(const int argc, char**const argv)
       // Input a tournament file, and compute the pairings of the next round.
       try
       {
-        std::ifstream inputStream(inputFilename);
-
         // Read the tournament.
         tournament::Tournament tournament;
         try
         {
-          tournament = fileformats::trf::readFile(inputStream, true);
+          if (doPairingsWithoutFilename)
+          {
+            tournament = fileformats::trf::readFile(std::cin, true);
+          }
+          else
+          {
+            std::ifstream inputStream(inputFilename);
+            tournament = fileformats::trf::readFile(inputStream, true);
+          }
         }
         catch (const fileformats::FileFormatException &exception)
         {
