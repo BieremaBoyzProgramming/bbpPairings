@@ -708,22 +708,39 @@ namespace swisssystems
             {
               break;
             }
-            matching_computer::edge_weight edgeWeight =
-              sortedPlayers.size() & 1u
-                ? matching_computer::edge_weight{
-                    compatible(*player, *opponent, tournament)
-                      ? (1u
-                              + !eligibleForBye(*player, tournament)
-                              + !eligibleForBye(*opponent, tournament))
-                            << scoreGroupsShift
-                          // Minimize bye assignee score
-                          | (scoreGroupShifts.find(playerScore)->second
-                              + scoreGroupShifts.find(
-                                    opponent->scoreWithAcceleration(tournament)
-                                  )->second)
-                      : 0u
-                  }
-                : computeEdgeWeight(
+            if (sortedPlayers.size() & 1u)
+            {
+              matching_computer::edge_weight edgeWeight{ maxEdgeWeight };
+              edgeWeight &= 0u;
+              if (compatible(*player, *opponent, tournament))
+              {
+                edgeWeight |=
+                  1u
+                    + !eligibleForBye(*player, tournament)
+                    + !eligibleForBye(*opponent, tournament);
+                edgeWeight <<= scoreGroupsShift;
+                edgeWeight |=
+                  scoreGroupShifts.find(playerScore)->second
+                    + scoreGroupShifts.find(
+                          opponent->scoreWithAcceleration(tournament)
+                        )->second;
+                edgeWeight <<= scoreGroupSizeBits;
+                edgeWeight |=
+                  player->scoreWithAcceleration(tournament)
+                    >= sortedPlayers.front()->scoreWithAcceleration(tournament);
+              }
+              matchingComputer.setEdgeWeight(
+                playerIndex,
+                opponentIndex,
+                std::move(edgeWeight));
+            }
+            else
+            {
+              matchingComputer
+                .setEdgeWeight(
+                  playerIndex,
+                  opponentIndex,
+                  computeEdgeWeight(
                     *opponent,
                     *player,
                     false,
@@ -733,18 +750,19 @@ namespace swisssystems
                     scoreGroupSizeBits,
                     scoreGroupsShift,
                     scoreGroupShifts,
-                    maxEdgeWeight);
-            matchingComputer
-              .setEdgeWeight(playerIndex, opponentIndex, std::move(edgeWeight));
+                    maxEdgeWeight));
+            }
             ++opponentIndex;
           }
           ++playerIndex;
         }
       }
 
-      // Check whether a pairing is possible initially and determine score of
-      // bye assignee.
+      // Check whether a pairing is possible initially, determine score of bye
+      // assignee, and check whether C9 (minimise unplayed games of bye
+      // assignee) takes effect in the first bracket.
       tournament::points byeAssigneeScore{ };
+      bool isSingleDownfloaterTheByeAssignee;
       {
         matchingComputer.computeMatching();
         const std::vector<tournament::player_index> matching =
@@ -772,6 +790,35 @@ namespace swisssystems
             }
             ++playerIndex;
           }
+
+          auto topScore = sortedPlayers.front()->scoreWithAcceleration(tournament);
+          if (byeAssigneeScore >= topScore)
+          {
+            isSingleDownfloaterTheByeAssignee = true;
+            playerIndex = 0u;
+            for (const tournament::Player *const player : sortedPlayers)
+            {
+              if (player->scoreWithAcceleration(tournament) < topScore)
+              {
+                break;
+              }
+              if (
+                sortedPlayers[playerIndex]->scoreWithAcceleration(tournament)
+                  < topScore)
+              {
+                isSingleDownfloaterTheByeAssignee = false;
+                break;
+              }
+              ++playerIndex;
+            }
+          }
+          else
+          {
+            isSingleDownfloaterTheByeAssignee = false;
+          }
+
+          // TODO: Incorporate isSingleDownfloaterTheByeAssignee in edge weights
+          // and update it for subsequent brackets
 
           playerIndex = 0u;
           for (const tournament::Player *const player : sortedPlayers)
