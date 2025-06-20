@@ -154,6 +154,8 @@ namespace tournament
      */
     tournament::rating rating;
 
+    round_index playedGames;
+
     points scoreWithoutAcceleration;
 
     Color colorPreference = COLOR_NONE;
@@ -171,6 +173,7 @@ namespace tournament
         const player_index id_,
         const points points_,
         const tournament::rating rating_,
+        const round_index playedGames_,
         std::vector<Match> &&matches_ = std::vector<Match>(),
         std::unordered_set<player_index> &&forbiddenPairs_ =
           std::unordered_set<player_index>())
@@ -179,6 +182,7 @@ namespace tournament
         id(id_),
         rankIndex(id_),
         rating(rating_),
+        playedGames(playedGames_),
         scoreWithoutAcceleration(points_),
         isValid(true)
     { }
