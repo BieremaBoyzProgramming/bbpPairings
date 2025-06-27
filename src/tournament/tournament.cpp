@@ -36,8 +36,9 @@ namespace tournament
   }
 
   /**
-   * Update players' acceleration and color preference data members, while also
-   * verifying that overflow is not caused by exceeding build limits.
+   * Update players' acceleration, unplayed games, and color preference data
+   * members, while also verifying that overflow is not caused by exceeding
+   * build limits.
    */
   void Tournament::computePlayerData() &
   {
@@ -49,10 +50,12 @@ namespace tournament
         round_index gamesAsWhite{ };
         round_index gamesAsBlack{ };
         player_index consecutiveCount{ };
+        round_index playedGames{ };
         for (const Match &match : player.matches)
         {
           if (match.gameWasPlayed)
           {
+            ++player.playedGames;
             ++(match.color == COLOR_WHITE ? gamesAsWhite : gamesAsBlack);
             if (!consecutiveCount || match.color != player.repeatedColor)
             {
@@ -65,6 +68,7 @@ namespace tournament
             player.repeatedColor = match.color;
           }
         }
+        player.playedGames = playedGames;
         const Color lowerColor =
           gamesAsWhite > gamesAsBlack
             ? tournament::COLOR_BLACK

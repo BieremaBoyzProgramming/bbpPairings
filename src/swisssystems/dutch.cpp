@@ -301,11 +301,11 @@ namespace swisssystems
         {
           if (higherPlayer.scoreWithAcceleration(tournament) == byeAssigneeScore)
           {
-            result |= playedGamesRank.find(higherPlayer.playedGames)->second;
+            result |= playedGamesRanks.find(higherPlayer.playedGames)->second;
           }
           if (lowerPlayer.scoreWithAcceleration(tournament) == byeAssigneeScore)
           {
-            result += playedGamesRank.find(lowerPlayer.playedGames)->second;
+            result += playedGamesRanks.find(lowerPlayer.playedGames)->second;
           }
         }
 
@@ -892,7 +892,7 @@ namespace swisssystems
           }
           std::sort(playedGameCounts.begin(), playedGameCounts.end());
           tournament::player_index rank{ };
-          for (const playedGames : playedGameCounts)
+          for (const tournament::round_index playedGames : playedGameCounts)
           {
             playedGamesRanks[playedGames] = rank++;
           }

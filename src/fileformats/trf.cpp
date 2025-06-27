@@ -146,7 +146,6 @@ namespace fileformats
 
         tournament::round_index skippedRounds{ };
         std::vector<tournament::Match> matches;
-        tournament::round_index playedGames{ };
         std::u32string::size_type startIndex = 91u;
         for (
           ;
@@ -312,11 +311,6 @@ namespace fileformats
                       tournament::maxRounds)
                   + " rounds.");
             }
-          }
-
-          if (gameWasPlayed)
-          {
-            ++playedGames;
           }
         }
         if (line.find_first_not_of(U" ", startIndex) < line.npos)

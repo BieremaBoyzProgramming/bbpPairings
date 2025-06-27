@@ -57,7 +57,7 @@ optional_cxxflags = \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wsign-promo \
-	-Wstrict-overflow=4 \
+	-Wstrict-overflow=2 \
 	-Wsuggest-override \
 	-Wswitch-default \
 	-Wundef \
@@ -82,7 +82,7 @@ optional_cxxflags = \
 # -Wpadded
 # -Wshadow
 # -Wsign-conversion
-# -Wstrict-overflow=5
+# -Wstrict-overflow=3
 # -Wswitch-enum
 # -Wsystem-headers
 

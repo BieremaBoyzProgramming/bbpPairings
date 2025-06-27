@@ -124,9 +124,21 @@ namespace tournament
     { }
   };
 
+  typedef std::vector<Match> matches_vector;
+  typedef
+    utility::typesizes
+      ::smallest<
+#ifdef MAX_ROUNDS
+        utility::uinttypes::uint_least_for_value<MAX_ROUNDS>,
+#endif
+        matches_vector::size_type,
+        std::string::size_type
+      >::type
+    round_index;
+
   struct Player
   {
-    std::vector<Match> matches;
+    matches_vector matches;
     /**
      * Round-indexed accelerations. If the vector is shorter than the number of
      * rounds, zeroes are implied.
@@ -154,7 +166,7 @@ namespace tournament
      */
     tournament::rating rating;
 
-    round_index playedGames;
+    round_index playedGames{ };
 
     points scoreWithoutAcceleration;
 
@@ -173,7 +185,6 @@ namespace tournament
         const player_index id_,
         const points points_,
         const tournament::rating rating_,
-        const round_index playedGames_,
         std::vector<Match> &&matches_ = std::vector<Match>(),
         std::unordered_set<player_index> &&forbiddenPairs_ =
           std::unordered_set<player_index>())
@@ -182,7 +193,6 @@ namespace tournament
         id(id_),
         rankIndex(id_),
         rating(rating_),
-        playedGames(playedGames_),
         scoreWithoutAcceleration(points_),
         isValid(true)
     { }
@@ -236,16 +246,6 @@ namespace tournament
             player0->rankIndex);
   }
 
-  typedef
-    utility::typesizes
-      ::smallest<
-#ifdef MAX_ROUNDS
-        utility::uinttypes::uint_least_for_value<MAX_ROUNDS>,
-#endif
-        decltype(std::declval<Player>().matches)::size_type,
-        std::string::size_type
-      >::type
-    round_index;
   constexpr round_index maxRounds =
 #ifdef MAX_ROUNDS
     utility::typesizes::minUint(
