@@ -1602,7 +1602,7 @@ namespace swisssystems
             {
               ++scoreGroupBegin;
             }
-            else if (
+            if (
               sortedPlayers[stableMatching[playerVertex]]
                   ->scoreWithAcceleration(tournament)
                 < byeAssigneeScore)
