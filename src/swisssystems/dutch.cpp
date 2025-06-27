@@ -867,7 +867,8 @@ namespace swisssystems
                 break;
               }
               if (
-                sortedPlayers[playerIndex]->scoreWithAcceleration(tournament)
+                sortedPlayers[matching[playerIndex]]
+                    ->scoreWithAcceleration(tournament)
                   < topScore)
               {
                 isSingleDownfloaterTheByeAssignee = false;
@@ -1570,6 +1571,14 @@ namespace swisssystems
         std::vector<const tournament::Player *> newPlayersByIndex;
         std::vector<tournament::player_index> newVertexIndices;
         scoreGroupBegin = 0;
+
+        // Preliminary (may be set to false in the subsequent loop)
+        isSingleDownfloaterTheByeAssignee =
+          sortedPlayers.size() & 1u
+            && scoreGroupIterator != sortedPlayers.end()
+            && byeAssigneeScore
+                == (*scoreGroupIterator)->scoreWithAcceleration(tournament);
+
         for (
           tournament::player_index playerIndex = 0;
           playerIndex < playersByIndex.size();
@@ -1593,11 +1602,15 @@ namespace swisssystems
             {
               ++scoreGroupBegin;
             }
+            else if (
+              sortedPlayers[stableMatching[playerVertex]]
+                  ->scoreWithAcceleration(tournament)
+                < byeAssigneeScore)
+            {
+              isSingleDownfloaterTheByeAssignee = false;
+            }
           }
         }
-
-        // TODO: Update isSingleDownfloaterTheByeAssignee for subsequent
-        // brackets
 
         playersByIndex = std::move(newPlayersByIndex);
         vertexIndices = std::move(newVertexIndices);
