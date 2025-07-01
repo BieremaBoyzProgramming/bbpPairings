@@ -237,7 +237,7 @@ namespace swisssystems
             std::unordered_map<
               tournament::round_index,
               tournament::player_index>
-            &playedGamesRanks,
+            &unplayedGameRanks,
           matching_computer::edge_weight &maxEdgeWeight)
       {
         typename
@@ -297,15 +297,17 @@ namespace swisssystems
 
         // Minimize number of unplayed games of bye assignee
         shiftEdgeWeight<max>(result, scoreGroupSizeBits);
+        shiftEdgeWeight<max>(result, scoreGroupSizeBits);
         if (!max && isSingleDownloaterTheByeAssignee)
         {
-          if (higherPlayer.scoreWithAcceleration(tournament) == byeAssigneeScore)
+          if (
+            higherPlayer.scoreWithAcceleration(tournament) == byeAssigneeScore)
           {
-            result |= playedGamesRanks.find(higherPlayer.playedGames)->second;
+            result |= unplayedGameRanks.find(higherPlayer.playedGames)->second;
           }
           if (lowerPlayer.scoreWithAcceleration(tournament) == byeAssigneeScore)
           {
-            result += playedGamesRanks.find(lowerPlayer.playedGames)->second;
+            result += unplayedGameRanks.find(lowerPlayer.playedGames)->second;
           }
         }
 
@@ -579,7 +581,7 @@ namespace swisssystems
         const bool isSingleDownfloaterTheByeAssignee,
         const
           std::unordered_map<tournament::round_index, tournament::player_index>
-          &playedGamesRanks)
+          &unplayedGameRanks)
       {
         std::vector<std::vector<matching_computer::edge_weight>>
           result(playersByIndex.size());
@@ -606,7 +608,7 @@ namespace swisssystems
                 scoreGroupsShift,
                 scoreGroupShifts,
                 isSingleDownfloaterTheByeAssignee,
-                playedGamesRanks,
+                unplayedGameRanks,
                 maxEdgeWeight));
           }
         }
@@ -692,7 +694,7 @@ namespace swisssystems
         utility::typesizes::bitsToRepresent<unsigned int>(maxScoreGroupSize);
 
       std::unordered_map<tournament::round_index, tournament::player_index>
-        playedGamesRanks{ };
+        unplayedGameRanks{ };
 
       // Compute an edge weight upper bound.
       matching_computer::edge_weight maxEdgeWeight{ 0u };
@@ -707,7 +709,7 @@ namespace swisssystems
         scoreGroupsShift,
         scoreGroupShifts,
         false,
-        playedGamesRanks,
+        unplayedGameRanks,
         maxEdgeWeight);
 
       // Initialize the matching computer used to optimize the pairings
@@ -782,7 +784,7 @@ namespace swisssystems
                     scoreGroupsShift,
                     scoreGroupShifts,
                     false,
-                    playedGamesRanks,
+                    unplayedGameRanks,
                     maxEdgeWeight));
             }
             ++opponentIndex;
@@ -848,7 +850,7 @@ namespace swisssystems
                   scoreGroupsShift,
                   scoreGroupShifts,
                   isSingleDownfloaterTheByeAssignee,
-                  playedGamesRanks,
+                  unplayedGameRanks,
                   maxEdgeWeight));
               ++opponentIndex;
             }
@@ -890,11 +892,11 @@ namespace swisssystems
               playedGameCounts.emplace_back(player->playedGames);
             }
           }
-          std::sort(playedGameCounts.begin(), playedGameCounts.end());
+          std::sort(playedGameCounts.rbegin(), playedGameCounts.rend());
           tournament::player_index rank{ };
           for (const tournament::round_index playedGames : playedGameCounts)
           {
-            playedGamesRanks[playedGames] = rank++;
+            unplayedGameRanks[playedGames] = rank++;
           }
         }
       }
@@ -991,7 +993,7 @@ namespace swisssystems
             scoreGroupsShift,
             scoreGroupShifts,
             isSingleDownfloaterTheByeAssignee,
-            playedGamesRanks);
+            unplayedGameRanks);
 
         // Update the matching computer for optimizing the pairing in the
         // current pairing bracket

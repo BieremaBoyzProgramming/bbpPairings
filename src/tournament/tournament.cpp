@@ -55,7 +55,7 @@ namespace tournament
         {
           if (match.gameWasPlayed)
           {
-            ++player.playedGames;
+            ++playedGames;
             ++(match.color == COLOR_WHITE ? gamesAsWhite : gamesAsBlack);
             if (!consecutiveCount || match.color != player.repeatedColor)
             {
