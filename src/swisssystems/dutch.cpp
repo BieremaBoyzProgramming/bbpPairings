@@ -1579,7 +1579,7 @@ namespace swisssystems
           sortedPlayers.size() & 1u
             && scoreGroupIterator != sortedPlayers.end()
             && byeAssigneeScore
-                == (*scoreGroupIterator)->scoreWithAcceleration(tournament);
+                >= (*scoreGroupIterator)->scoreWithAcceleration(tournament);
 
         for (
           tournament::player_index playerIndex = 0;
@@ -1605,9 +1605,10 @@ namespace swisssystems
               ++scoreGroupBegin;
             }
             if (
-              sortedPlayers[stableMatching[playerVertex]]
-                  ->scoreWithAcceleration(tournament)
-                < byeAssigneeScore)
+              isSingleDownfloaterTheByeAssignee
+                && sortedPlayers[stableMatching[playerVertex]]
+                      ->scoreWithAcceleration(tournament)
+                    < (*scoreGroupIterator)->scoreWithAcceleration(tournament))
             {
               isSingleDownfloaterTheByeAssignee = false;
             }
