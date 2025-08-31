@@ -1,0 +1,65 @@
+name: Build Test Matrix
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }} - ${{ matrix.compiler }} - ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux with both gcc and clang
+          - os: ubuntu-latest
+            compiler: gcc
+            build_type: release
+          - os: ubuntu-latest
+            compiler: clang
+            build_type: release
+          # macOS with clang only
+          - os: macos-latest
+            compiler: clang
+            build_type: release
+      fail-fast: false
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          sudo apt-get install -y clang
+        fi
+    
+    - name: Display compiler version
+      run: |
+        echo "OS: ${{ runner.os }}"
+        echo "Compiler: ${{ matrix.compiler }}"
+        if [ "${{ matrix.compiler }}" = "gcc" ]; then
+          g++ --version
+        else
+          clang++ --version
+        fi
+    
+    - name: Build
+      run: |
+        make clean
+        make COMP=${{ matrix.compiler }}
+    
+    - name: Run tests
+      run: |
+        make test COMP=${{ matrix.compiler }}
+    
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: bbpPairings-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+        path: bbpPairings.exe
