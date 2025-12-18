@@ -28,7 +28,8 @@ std::string error(const std::string& code, const std::string& message) {
 }
 
 std::string pairing(const std::string& input) {
-  // Input a tournament file, and compute the pairings of the next round.
+  const swisssystems::SwissSystem swissSystem = swisssystems::DUTCH;
+
   try
   {
     std::istringstream inputStream(input);
@@ -54,9 +55,6 @@ std::string pairing(const std::string& input) {
     tournament.updateRanks();
     tournament.computePlayerData();
 
-    return "NOT YET IMPLEMENTED";    
-
-  /*
     // Add default accelerations.
     const swisssystems::Info &info = swisssystems::getInfo(swissSystem);
     if (tournament.defaultAcceleration)
@@ -70,101 +68,45 @@ std::string pairing(const std::string& input) {
       }
     }
 
-    // Open the output file, if specified.
-    std::ofstream outputFileStream;
-    std::ostream *outputStream = &std::cout;
-    if (pairingsOutputFile)
-    {
-      try
-      {
-        relativizePath(outputFilename, inputFilename);
-      }
-      catch (const std::filesystem::filesystem_error &)
-      {
-        std::cerr
-          << "Error extracting the directory of the input file."
-          << std::endl;
-        return FILE_ERROR;
-      }
-
-      outputFileStream = std::ofstream(outputFilename);
-      if (!outputFileStream)
-      {
-        std::cerr << "The output file ("
-          << outputFilename
-          << ") could not be opened."
-          << std::endl;
-        return FILE_ERROR;
-      }
-      outputStream = &outputFileStream;
-    }
-
-    // Open the checklist output file, if requested.
-    std::unique_ptr<std::ofstream> checklistStream;
-    if (checklist)
-    {
-      checklistStream =
-        openChecklist(
-          checklistFilename,
-          checklistCustomFilename,
-          inputFilename);
-    }
-
     // Compute the matching.
     std::list<swisssystems::Pairing> pairs;
     try
     {
       pairs =
-        info.computeMatching(std::move(tournament), checklistStream.get());
+        info.computeMatching(std::move(tournament), 0);
     }
     catch (const swisssystems::NoValidPairingException &exception)
     {
-      std::cerr << "Error while pairing "
-        << inputFilename
-        << ": No valid pairing exists: "
-        << exception.what()
-        << std::endl;
-      return NO_VALID_PAIRING;
+      return error("NO_VALID_PAIRING", "No valid pairing exists: " + std::string(exception.what()));
     }
     catch (const swisssystems::UnapplicableFeatureException &exception)
     {
-      std::cerr << "Error while pairing "
-        << inputFilename
-        << ": "
-        << exception.what()
-        << std::endl;
-      return INVALID_REQUEST;
+      return error("INVALID_REQUEST", "Error while pairing: " + std::string(exception.what()));
     }
-
-    closeChecklist(checklistStream.get(), checklistFilename);
 
     swisssystems::sortResults(pairs, tournament);
 
     // Output the pairs.
-    *outputStream << pairs.size() << std::endl;
+    if (pairs.empty()) {
+      return "[]";
+    }
+    std::ostringstream outputStream;
+    std::string prefix = "\n  ";  // Prefix if there is another element.
+    outputStream << "[\n";
     for (const swisssystems::Pairing &pair : pairs)
     {
-      *outputStream << pair.white + 1u
-        << ' '
+      outputStream << prefix
+        << '['
+        << pair.white + 1u
+        << ','
         << (pair.white == pair.black
               ? "0"
               : utility::uintstringconversion::toString(pair.black + 1u))
-        << std::endl;
+        << "]";
+      prefix = ",\n  ";
     }
-
-    if (pairingsOutputFile)
-    {
-      // Check for errors.
-      outputFileStream.close();
-      if (!outputFileStream)
-      {
-        std::cerr << "Error while writing to output file "
-          << outputFilename
-          << '.'
-          << std::endl;
-      }
-    }
-*/
+    outputStream << "\n]\n";
+    return outputStream.str();
   }
   catch (const tournament::BuildLimitExceededException &exception)
   {
