@@ -23,8 +23,17 @@
 
 using namespace emscripten;
 
+std::string replaceAll(std::string str, const std::string& from, const std::string& to) {
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length();
+    }
+    return str;
+}
+
 std::string error(const std::string& code, const std::string& message) {
-    return "{ error: { code: \"" + code + "\", message: \"" + message + "\" }}";
+    return "{ \"error\": { \"code\": \"" + code + "\", \"message\": \"" + replaceAll(message, "\"", "\\\"") + "\" }}";
 }
 
 std::string pairing(const std::string& input) {
@@ -92,7 +101,7 @@ std::string pairing(const std::string& input) {
     }
     std::ostringstream outputStream;
     std::string prefix = "\n  ";  // Prefix if there is another element.
-    outputStream << "[\n";
+    outputStream << "[";
     for (const swisssystems::Pairing &pair : pairs)
     {
       outputStream << prefix
