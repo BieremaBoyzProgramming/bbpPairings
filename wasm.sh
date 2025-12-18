@@ -2,4 +2,8 @@
 
 # TODO: Stop hardcoding this.
 alias emcc=~/code/emsdk/upstream/emscripten/emcc
-emcc -O2 src/wasm.cpp -o build/bbpPairing.html
+emcc -lembind -O2 -o build/bbpPairing.html src/wasm.cpp
+
+# TODO: Better JS API using:
+# -s MODULARIZE=1 
+# -s EXPORT_NAME="MyPairingModule"
