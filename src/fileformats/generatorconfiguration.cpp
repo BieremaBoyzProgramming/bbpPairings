@@ -142,9 +142,11 @@ namespace fileformats
                 }
                 else if (propertyName == "PointsForForfeitLoss")
                 {
-                  configuration.tournament.pointsForForfeitLoss =
+                  const auto value =
                     utility::uintstringconversion
                       ::parse<tournament::points>(propertyValue, 1);
+                  configuration.tournament.pointsForForfeitLoss = value;
+                  configuration.tournament.pointsForZeroPointBye = value;
                 }
                 else if (propertyName == "PointsForPAB")
                 {

@@ -251,6 +251,8 @@ namespace tournament
     {
       result = std::move(configuration.tournament);
 
+      result.swissSystem = swissSystem;
+
       result.initialColor =
         std::uniform_int_distribution<unsigned char>(false, true)(randomEngine)
           ? COLOR_BLACK

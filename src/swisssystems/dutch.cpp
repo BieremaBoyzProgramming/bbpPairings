@@ -34,7 +34,9 @@ namespace swisssystems
       bool compatible(
         const tournament::Player &player0,
         const tournament::Player &player1,
-        const tournament::Tournament &tournament)
+        const tournament::Tournament &tournament,
+        const std::vector<std::unordered_set<tournament::player_index>>
+          &forbiddenPairs)
       {
         constexpr unsigned int maxPointsSize =
           utility::typesizes
@@ -53,7 +55,7 @@ namespace swisssystems
             * std::max(tournament.pointsForWin, tournament.pointsForDraw)
             >> 1;
         return
-          !player0.forbiddenPairs.count(player1.id)
+          !forbiddenPairs[player0.id].count(player1.id)
             && (!player0.absoluteColorPreference()
                   || !player1.absoluteColorPreference()
                   || player0.colorPreference != player1.colorPreference
@@ -826,6 +828,8 @@ namespace swisssystems
       // Filter out the absent players, and sort the remainder by score and
       // pairing ID.
       std::list<const tournament::Player *> sortedPlayers;
+      // We add forbidden pairs due to previous matches below
+      auto forbiddenPairs = tournament.resolveForbiddenPairs(tournament.playedRounds);
       for (tournament::Player &player : tournament.players)
       {
         if (player.isValid)
@@ -838,7 +842,7 @@ namespace swisssystems
           {
             if (match.gameWasPlayed)
             {
-              player.forbiddenPairs.insert(match.opponent);
+              forbiddenPairs[player.id].insert(match.opponent);
             }
           }
         }
@@ -887,7 +891,7 @@ namespace swisssystems
               validityMatchingComputer.setEdgeWeight(
                 playerIndex,
                 opponentIndex,
-                compatible(*player, *opponent, tournament));
+                compatible(*player, *opponent, tournament, forbiddenPairs));
             }
             ++opponentIndex;
           }
