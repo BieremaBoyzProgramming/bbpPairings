@@ -318,7 +318,7 @@ namespace tournament
     }
 
     std::vector<std::unordered_set<player_index>>
-      Tournament::resolveForbiddenPairs(round_index) const &;
+      resolveForbiddenPairs(round_index) const &;
 
     void updateRanks() &;
     void computePlayerData() &;

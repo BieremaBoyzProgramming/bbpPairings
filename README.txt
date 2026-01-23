@@ -8,10 +8,9 @@ The version at <https://github.com/BieremaBoyzProgramming/bbpPairings> may
 include changes that have not yet been included in a release.
 
 
-BBP Pairings is an engine for pairing players in an individual (non-team)
-Swiss-system chess tournament. It attempts to implement rules specified in the
-FIDE handbook. It is not a full tournament manager, just an engine for computing
-the pairings.
+BBP Pairings is an engine for pairing players in a Swiss-system chess
+tournament. It attempts to implement rules specified in the FIDE handbook. It is
+not a full tournament manager, just an engine for computing the pairings.
 
 The program currently implements the 2017 rules for the Dutch system. It also
 includes a flawed implementation of a previous version of the Burstein system.

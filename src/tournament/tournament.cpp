@@ -108,5 +108,7 @@ namespace tournament
         result[player1Index].insert(entry.players.begin(), entry.players.end());
       }
     }
+
+    return result;
   }
 }

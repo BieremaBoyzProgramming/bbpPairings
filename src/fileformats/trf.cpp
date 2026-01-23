@@ -1320,7 +1320,7 @@ namespace fileformats
 
       if (includesUnpairedRound)
       {
-        for (const auto pair : byes)
+        for (const auto &pair : byes)
         {
           if (pair.first != result.playedRounds)
             continue;
@@ -1328,12 +1328,7 @@ namespace fileformats
           auto &player = result.players[pair.second];
           if (player.matches.size() <= result.playedRounds)
           {
-            player.matches.emplace_back(
-              player.id,
-              tournament::COLOR_NONE,
-              result.pointsForZeroPointBye,
-              false,
-              false);
+            player.matches.emplace_back(player.id);
           }
         }
       }

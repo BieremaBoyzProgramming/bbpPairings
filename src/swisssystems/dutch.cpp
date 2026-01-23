@@ -237,6 +237,8 @@ namespace swisssystems
           const bool higherPlayerInCurrentBracket,
           const bool lowerPlayerInCurrentBracket,
           const tournament::Tournament &tournament,
+          const std::vector<std::unordered_set<tournament::player_index>>
+            &forbiddenPairs,
           const unsigned int playerCountBits,
           const unsigned int nextScoreGroupPlayerCountBits,
           const score_difference_shift scoreDifferenceShift,
@@ -256,7 +258,13 @@ namespace swisssystems
         result &= 0u;
 
         // Check compatibility.
-        if (!max && !compatible(higherPlayer, lowerPlayer, tournament))
+        if (
+          !max
+            && !compatible(
+                  higherPlayer,
+                  lowerPlayer,
+                  tournament,
+                  forbiddenPairs))
         {
           return result;
         }
@@ -658,7 +666,9 @@ namespace swisssystems
         const tournament::player_index nextScoreGroupBegin,
         const bool specialBrackets,
         const bool finalBrackets,
-        const tournament::Tournament &tournament)
+        const tournament::Tournament &tournament,
+        const std::vector<std::unordered_set<tournament::player_index>>
+          &forbiddenPairs)
       {
         // Get an upper bound on the number of occurences of each score
         // difference in the current pairing bracket.
@@ -751,6 +761,7 @@ namespace swisssystems
           true,
           true,
           tournament,
+          forbiddenPairs,
           playerCountBits,
           nextScoreGroupPlayerCountBits,
           scoreDifferenceShift,
@@ -765,6 +776,7 @@ namespace swisssystems
             specialBrackets,
             finalBrackets,
             &tournament,
+            &forbiddenPairs,
             playerCountBits,
             nextScoreGroupPlayerCountBits,
             scoreDifferenceShift,
@@ -784,6 +796,7 @@ namespace swisssystems
                 smallerPlayerIndex < nextScoreGroupBegin,
                 largerPlayerIndex < nextScoreGroupBegin,
                 tournament,
+                forbiddenPairs,
                 playerCountBits,
                 nextScoreGroupPlayerCountBits,
                 scoreDifferenceShift,
@@ -1001,7 +1014,8 @@ namespace swisssystems
             nextScoreGroupBegin,
             specialBrackets,
             nextScoreGroupIterator == sortedPlayers.end(),
-            tournament);
+            tournament,
+            forbiddenPairs);
 
         // Initialize the matching computer used to optimize the pairing in the
         // current pairing bracket
