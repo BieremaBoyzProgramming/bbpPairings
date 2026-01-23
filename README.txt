@@ -13,9 +13,10 @@ tournament. It attempts to implement rules specified by FIDE's Systems of
 Pairings and Programs Commission. It is not a full tournament manager, just an
 engine for computing the pairings.
 
-The program currently implements the 2017 rules for the Dutch system. It also
-includes a flawed implementation of a previous version of the Burstein system.
-The implementation of the Burstein system has not been endorsed by the SPP.
+The program currently implements the 2025 rules for the Dutch system (the
+effective date for the rules was delayed to 2026). It also includes a flawed
+implementation of a previous version of the Burstein system. The implementation
+of the Burstein system has not been endorsed by FIDE.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
