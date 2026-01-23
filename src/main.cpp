@@ -365,11 +365,13 @@ int main(const int argc, char**const argv)
           return FILE_ERROR;
         }
 
-        if (swissSystem != tournament.swissSystem)
+        if (
+          swissSystem != tournament.swissSystem
+            && tournament.swissSystem != swisssystems::NONE)
         {
           std::cerr << "Pairing system specified in file "
             << inputFilename
-            << "does not match command line flag."
+            << " does not match command line flag."
             << std::endl;
           return INVALID_REQUEST;
         }
