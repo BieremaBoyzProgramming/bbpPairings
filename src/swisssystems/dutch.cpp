@@ -870,6 +870,21 @@ namespace swisssystems
             isSingleDownfloaterTheByeAssignee = false;
           }
 
+          std::vector<tournament::round_index> playedGameCounts{ };
+          for (const tournament::Player *const player : sortedPlayers)
+          {
+            if (player->scoreWithAcceleration(tournament) == byeAssigneeScore)
+            {
+              playedGameCounts.emplace_back(player->playedGames);
+            }
+          }
+          std::sort(playedGameCounts.rbegin(), playedGameCounts.rend());
+          tournament::player_index rank{ };
+          for (const tournament::round_index playedGames : playedGameCounts)
+          {
+            unplayedGameRanks[playedGames] = rank++;
+          }
+
           playerIndex = 0u;
           for (const tournament::Player *const player : sortedPlayers)
           {
@@ -900,21 +915,6 @@ namespace swisssystems
               ++opponentIndex;
             }
             ++playerIndex;
-          }
-
-          std::vector<tournament::round_index> playedGameCounts{ };
-          for (const tournament::Player *const player : sortedPlayers)
-          {
-            if (player->scoreWithAcceleration(tournament) == byeAssigneeScore)
-            {
-              playedGameCounts.emplace_back(player->playedGames);
-            }
-          }
-          std::sort(playedGameCounts.rbegin(), playedGameCounts.rend());
-          tournament::player_index rank{ };
-          for (const tournament::round_index playedGames : playedGameCounts)
-          {
-            unplayedGameRanks[playedGames] = rank++;
           }
         }
         else
