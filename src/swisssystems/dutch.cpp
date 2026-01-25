@@ -843,6 +843,33 @@ namespace swisssystems
             ++playerIndex;
           }
 
+          auto topScore = sortedPlayers.front()->scoreWithAcceleration(tournament);
+          if (byeAssigneeScore >= topScore)
+          {
+            isSingleDownfloaterTheByeAssignee = true;
+            playerIndex = 0u;
+            for (const tournament::Player *const player : sortedPlayers)
+            {
+              if (player->scoreWithAcceleration(tournament) < topScore)
+              {
+                break;
+              }
+              if (
+                sortedPlayers[matching[playerIndex]]
+                    ->scoreWithAcceleration(tournament)
+                  < topScore)
+              {
+                isSingleDownfloaterTheByeAssignee = false;
+                break;
+              }
+              ++playerIndex;
+            }
+          }
+          else
+          {
+            isSingleDownfloaterTheByeAssignee = false;
+          }
+
           playerIndex = 0u;
           for (const tournament::Player *const player : sortedPlayers)
           {
@@ -873,33 +900,6 @@ namespace swisssystems
               ++opponentIndex;
             }
             ++playerIndex;
-          }
-
-          auto topScore = sortedPlayers.front()->scoreWithAcceleration(tournament);
-          if (byeAssigneeScore >= topScore)
-          {
-            isSingleDownfloaterTheByeAssignee = true;
-            playerIndex = 0u;
-            for (const tournament::Player *const player : sortedPlayers)
-            {
-              if (player->scoreWithAcceleration(tournament) < topScore)
-              {
-                break;
-              }
-              if (
-                sortedPlayers[matching[playerIndex]]
-                    ->scoreWithAcceleration(tournament)
-                  < topScore)
-              {
-                isSingleDownfloaterTheByeAssignee = false;
-                break;
-              }
-              ++playerIndex;
-            }
-          }
-          else
-          {
-            isSingleDownfloaterTheByeAssignee = false;
           }
 
           std::vector<tournament::round_index> playedGameCounts{ };
