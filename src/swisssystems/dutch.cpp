@@ -899,6 +899,10 @@ namespace swisssystems
             unplayedGameRanks[playedGames] = rank++;
           }
         }
+        else
+        {
+          isSingleDownfloaterTheByeAssignee = false;
+        }
       }
 
       /**
