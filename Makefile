@@ -51,7 +51,6 @@ optional_cxxflags = \
 	-Wmissing-braces \
 	-Wmissing-declarations \
 	-Wmissing-include-dirs \
-	-Wnull-dereference \
 	-Woverloaded-virtual \
 	-Wpacked \
 	-Wpointer-arith \
@@ -78,6 +77,7 @@ optional_cxxflags = \
 # -Winline
 # -Wlong-long
 # -Wnon-virtual-dtor
+# -Wnull-dereference
 # -Wold-style-cast
 # -Wpadded
 # -Wshadow

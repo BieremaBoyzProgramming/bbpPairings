@@ -34,7 +34,9 @@ namespace swisssystems
       bool compatible(
         const tournament::Player &player0,
         const tournament::Player &player1,
-        const tournament::Tournament &tournament)
+        const tournament::Tournament &tournament,
+        const std::vector<std::unordered_set<tournament::player_index>>
+          &forbiddenPairs)
       {
         constexpr unsigned int maxPointsSize =
           utility::typesizes
@@ -53,7 +55,7 @@ namespace swisssystems
             * std::max(tournament.pointsForWin, tournament.pointsForDraw)
             >> 1;
         return
-          !player0.forbiddenPairs.count(player1.id)
+          !forbiddenPairs[player0.id].count(player1.id)
             && (!player0.absoluteColorPreference()
                   || !player1.absoluteColorPreference()
                   || player0.colorPreference != player1.colorPreference
@@ -228,6 +230,8 @@ namespace swisssystems
           const bool lowerPlayerInNextBracket,
           const tournament::points byeAssigneeScore,
           const tournament::Tournament &tournament,
+          const std::vector<std::unordered_set<tournament::player_index>>
+            &forbiddenPairs,
           const unsigned int scoreGroupSizeBits,
           const score_group_shift scoreGroupsShift,
           const std::unordered_map<tournament::points, score_group_shift>
@@ -251,7 +255,13 @@ namespace swisssystems
         result &= 0u;
 
         // Check compatibility.
-        if (!max && !compatible(higherPlayer, lowerPlayer, tournament))
+        if (
+          !max
+            && !compatible(
+                  higherPlayer,
+                  lowerPlayer,
+                  tournament,
+                  forbiddenPairs))
         {
           return result;
         }
@@ -574,6 +584,8 @@ namespace swisssystems
         const tournament::player_index nextScoreGroupBegin,
         const tournament::points byeAssigneeScore,
         const tournament::Tournament &tournament,
+        const std::vector<std::unordered_set<tournament::player_index>>
+          &forbiddenPairs,
         const unsigned int scoreGroupSizeBits,
         const score_group_shift scoreGroupsShift,
         const std::unordered_map<tournament::points, score_group_shift>
@@ -604,6 +616,7 @@ namespace swisssystems
                 largerPlayerIndex >= nextScoreGroupBegin,
                 byeAssigneeScore,
                 tournament,
+                forbiddenPairs,
                 scoreGroupSizeBits,
                 scoreGroupsShift,
                 scoreGroupShifts,
@@ -630,6 +643,8 @@ namespace swisssystems
       // Filter out the absent players, and sort the remainder by score and
       // pairing ID.
       std::vector<const tournament::Player *> sortedPlayers;
+      // We add forbidden pairs due to previous matches below
+      auto forbiddenPairs = tournament.resolveForbiddenPairs(tournament.playedRounds);
       for (tournament::Player &player : tournament.players)
       {
         if (player.isValid)
@@ -642,7 +657,7 @@ namespace swisssystems
           {
             if (match.gameWasPlayed)
             {
-              player.forbiddenPairs.insert(match.opponent);
+              forbiddenPairs[player.id].insert(match.opponent);
             }
           }
         }
@@ -705,6 +720,7 @@ namespace swisssystems
         false,
         0u,
         tournament,
+        forbiddenPairs,
         scoreGroupSizeBits,
         scoreGroupsShift,
         scoreGroupShifts,
@@ -745,7 +761,7 @@ namespace swisssystems
             {
               matching_computer::edge_weight edgeWeight{ maxEdgeWeight };
               edgeWeight &= 0u;
-              if (compatible(*player, *opponent, tournament))
+              if (compatible(*player, *opponent, tournament, forbiddenPairs))
               {
                 edgeWeight |=
                   1u
@@ -780,6 +796,7 @@ namespace swisssystems
                     false,
                     0u,
                     tournament,
+                    forbiddenPairs,
                     scoreGroupSizeBits,
                     scoreGroupsShift,
                     scoreGroupShifts,
@@ -846,6 +863,7 @@ namespace swisssystems
                   false,
                   byeAssigneeScore,
                   tournament,
+                  forbiddenPairs,
                   scoreGroupSizeBits,
                   scoreGroupsShift,
                   scoreGroupShifts,
@@ -989,6 +1007,7 @@ namespace swisssystems
             nextScoreGroupBegin,
             byeAssigneeScore,
             tournament,
+            forbiddenPairs,
             scoreGroupSizeBits,
             scoreGroupsShift,
             scoreGroupShifts,

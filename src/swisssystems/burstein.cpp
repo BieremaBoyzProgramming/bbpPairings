@@ -528,11 +528,13 @@ namespace swisssystems
       matching_computer::edge_weight computeEdgeWeight(
         const tournament::Player &player0,
         const tournament::Player &player1,
+        const std::vector<std::unordered_set<tournament::player_index>>
+          &forbiddenPairs,
         bool sameScoreGroup,
         bool useDueColor)
       {
         return
-          player0.forbiddenPairs.count(player1.id)
+          forbiddenPairs[player0.id].count(player1.id)
               || (player0.absoluteColorPreference()
                     && player1.absoluteColorPreference()
                     && player0.colorPreference == player1.colorPreference)
@@ -705,6 +707,8 @@ namespace swisssystems
       // and within scoregroups.
       std::vector<const tournament::Player *> sortedPlayers;
       std::vector<adjusted_score> adjustedScores;
+      // We add forbidden pairs due to previous pairings below
+      auto forbiddenPairs = tournament.resolveForbiddenPairs(tournament.playedRounds);
       for (tournament::Player &player : tournament.players)
       {
         adjusted_score adjustedScore{ };
@@ -724,7 +728,7 @@ namespace swisssystems
             }
             if (match.gameWasPlayed)
             {
-              player.forbiddenPairs.insert(match.opponent);
+              forbiddenPairs[player.id].insert(match.opponent);
             }
           }
         }
@@ -859,6 +863,7 @@ namespace swisssystems
                 computeEdgeWeight(
                   *vertexLabels[vertexIndex],
                   *vertexLabels[scoreGroups.back()],
+                  forbiddenPairs,
                   vertexIndex >= *++scoreGroups.rbegin(),
                   false));
             }
@@ -922,6 +927,7 @@ namespace swisssystems
               computeEdgeWeight(
                 *vertexLabels[outerIndex],
                 *vertexLabels[innerIndex],
+                forbiddenPairs,
                 outerIndex >= scoreGroupBegin,
                 false));
           }
@@ -1007,6 +1013,7 @@ namespace swisssystems
               computeEdgeWeight(
                 *vertexLabels[vertexIndex],
                 *vertexLabels[*neighborIterator],
+                forbiddenPairs,
                 true,
                 true));
           }
@@ -1035,6 +1042,7 @@ namespace swisssystems
                   computeEdgeWeight(
                     *vertexLabels[*vertexIterator],
                     *vertexLabels[*neighborIterator],
+                    forbiddenPairs,
                     true,
                     true);
                 if (edgeWeight)

@@ -12,17 +12,6 @@
 
 namespace swisssystems
 {
-  enum SwissSystem
-  {
-#ifndef OMIT_DUTCH
-    DUTCH,
-#endif
-#ifndef OMIT_BURSTEIN
-    BURSTEIN,
-#endif
-    NONE
-  };
-
   /**
    * An exception indicating that no pairing satisfies the requirements imposed
    * by the system.

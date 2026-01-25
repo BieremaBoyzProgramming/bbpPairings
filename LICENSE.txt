@@ -1,5 +1,5 @@
 BBP Pairings
-Copyright 2016-2022 Jeremy Bierema.
+Copyright 2016-2026 Jeremy Bierema.
 
 The source code of BBP Pairings is released under the Apache License,
 Version 2.0. The full text of the license can be found in Apache-2.0.txt.

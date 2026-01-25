@@ -9,9 +9,8 @@ include changes that have not yet been included in a release.
 
 
 BBP Pairings is an engine for pairing players in a Swiss-system chess
-tournament. It attempts to implement rules specified by FIDE's Systems of
-Pairings and Programs Commission. It is not a full tournament manager, just an
-engine for computing the pairings.
+tournament. It attempts to implement rules specified in the FIDE handbook. It is
+not a full tournament manager, just an engine for computing the pairings.
 
 The program currently implements the 2025 rules for the Dutch system (the
 effective date for the rules was delayed to 2026). It also includes a flawed
@@ -26,10 +25,16 @@ documentation assumes full understanding of the JaVaFo AUM.
 
 Hereafter, we will use the name "JaVaFo" to refer to JaVaFo 1.4.
 
-TRF(bx)
+Tournament files
 -------
-BBP Pairings supports only one file format, TRF(bx), an extension of the TRF(x)
-format defined for JaVaFo.
+BBP Pairings is designed to support the TRF-2026 file format, as specified by
+FIDE's Technical Commission. Certain features like free points and adjustable
+point values for adjourned games are not currently supported.
+
+Backwards compatability is provided for the previous file format, TRF(bx), an
+extension of the TRF(x) format defined for JaVaFo. The rest of this section
+provides more info on how TRF(bx) extends TRF(x) and inferences performed while
+reading tournament files.
 
 The first extension may be viewed by some as a deviation from TRF(x). In JaVaFo,
 if no acceleration values are specified using XXA codes in the TRF(x), then the
@@ -109,7 +114,7 @@ inferred initial color might not be correct, and the correct initial color
 should be specified for every round.
 
 
-BBP Pairings outputs files using the codes introduced in the 2016 version of the
+BBP Pairings outputs files using the codes introduced in the 2026 version of the
 TRF, but it can also read files produced using the codes specified in the JaVaFo
 AUM.
 
@@ -117,9 +122,9 @@ AUM.
 Random Tournament Generator
 ---------------------------
 The point value parameters not supported in JaVaFo 1.4 can be set using the keys
-PointsForLoss, PointsForZPB, PointsForForfeitLoss, and PointsForPAB. All of
-these have default values of 0.0, except the last, which by default is set equal
-to PointsForWin.
+PointsForLoss, PointsForForfeitLoss (applies to zero-point byes as well), and
+PointsForPAB. All of these have default values of 0.0, except the last, which by
+default is set equal to PointsForWin.
 
 BBP Pairings allows the user to specify a random seed on the command line when
 generating a random tournament. This can simplify data exchange when testing

@@ -96,21 +96,23 @@ namespace tournament
   /**
     * Exclude any players in forbidden from playing each other.
     */
-   void Tournament::forbidPairs(const std::deque<player_index> &forbidden) &
-   {
-     for (const player_index playerId : forbidden)
-     {
-       if (playerId >= players.size())
-       {
-         players.insert(
-           players.end(),
-           playerId - players.size() + 1,
-           Player());
-       }
-       for (const player_index teammate : forbidden)
-       {
-         players[playerId].forbiddenPairs.insert(teammate);
-       }
-     }
-   }
+  std::vector<std::unordered_set<player_index>>
+    Tournament::resolveForbiddenPairs(round_index roundIndex) const &
+  {
+    std::vector<std::unordered_set<player_index>> result(players.size());
+    for (const auto &entry : forbiddenPairs)
+    {
+      if (roundIndex < entry.roundStart || roundIndex >= entry.roundEnd)
+      {
+        continue;
+      }
+
+      for (const auto player1Index : entry.players)
+      {
+        result[player1Index].insert(entry.players.begin(), entry.players.end());
+      }
+    }
+
+    return result;
+  }
 }
