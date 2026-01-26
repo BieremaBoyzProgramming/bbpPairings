@@ -1540,7 +1540,7 @@ namespace fileformats
         }
         if (prefix == U"012" || prefix == U"240" || prefix == U"152")
         {
-          outputStream << "#";
+          outputStream << "### ";
         }
         outputStream << convert.to_bytes(line) << '\r';
       }
