@@ -107,11 +107,12 @@ namespace swisssystems
       {
         const tournament::Match &match =
           player.matches[tournament.playedRounds - roundsBack];
-        if (
-          !match.gameWasPlayed
-            && tournament.getPoints(player, match) > tournament.pointsForLoss)
+        if (!match.gameWasPlayed)
         {
-          return FLOAT_DOWN;
+          return
+            tournament.getPoints(player, match) > tournament.pointsForLoss
+              ? FLOAT_DOWN
+              : FLOAT_NONE;
         }
         const tournament::points playerScore =
           player.scoreWithAcceleration(tournament, roundsBack);
