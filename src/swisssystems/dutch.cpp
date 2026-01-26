@@ -72,7 +72,10 @@ namespace swisssystems
        * Check whether the matching is an eligible round pairing (where at least
        * all players but one are matched and no absolute criteria are violated).
        */
-      bool matchingIsComplete(const std::vector<tournament::player_index> &matching)
+      bool matchingIsComplete(
+        const std::vector<tournament::player_index> &matching,
+        const tournament::Tournament &tournament,
+        const std::vector<const tournament::Player *> &sortedPlayers)
       {
         bool encounteredUnmatchedPlayer{ };
         tournament::player_index vertexIndex{ };
@@ -80,7 +83,9 @@ namespace swisssystems
         {
           if (matchedIndex == vertexIndex++)
           {
-            if (encounteredUnmatchedPlayer)
+            if (
+              encounteredUnmatchedPlayer
+                || !eligibleForBye(*sortedPlayers[matchedIndex], tournament))
             {
               return false;
             }
@@ -820,7 +825,7 @@ namespace swisssystems
         matchingComputer.computeMatching();
         const std::vector<tournament::player_index> matching =
           matchingComputer.getMatching();
-        if (!matchingIsComplete(matching))
+        if (!matchingIsComplete(matching, tournament, sortedPlayers))
         {
           if (ostream)
           {
