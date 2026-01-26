@@ -120,7 +120,9 @@ namespace swisssystems
     {
       if (
         !match.gameWasPlayed
-          && tournament.getPoints(player, match) >= tournament.pointsForWin)
+          && (tournament.getPoints(player, match) >= tournament.pointsForWin
+                || (match.participatedInPairing
+                      && match.opponent == player.id)))
       {
         return false;
       }
