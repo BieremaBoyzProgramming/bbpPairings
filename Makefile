@@ -63,11 +63,7 @@ optional_cxxflags = \
 	-Wunknown-pragmas \
 	-Wunused-macros \
 	-Wvla \
-	-Wzero-as-null-pointer-constant \
-	-Wno-deprecated-declarations \
-	-Wno-free-nonheap-object \
-	-Wno-overflow \
-	-Wno-sign-compare
+	-Wzero-as-null-pointer-constant
 # Omitted because they were being triggered:
 # -Waggregate-return
 # -Wconversion
@@ -390,6 +386,12 @@ ifeq ($(COMP),clang)
 	# -Wweak-template-vtables
 	# -Wweak-vtables
 endif
+
+optional_cxxflags += \
+	-Wno-deprecated-declarations \
+	-Wno-free-nonheap-object \
+	-Wno-overflow \
+	-Wno-sign-compare
 
 CXXFLAGS = $(optional_cxxflags)
 
