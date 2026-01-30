@@ -534,7 +534,7 @@ namespace fileformats
         std::u32string::size_type startIndex = 12u;
         for (
           ;
-          startIndex < line.size() - 4u && startIndex >= 5u;
+          startIndex <= line.size() - 4u && startIndex >= 5u;
           startIndex += 5u)
         {
           players.push_back(readPlayerId(line.substr(startIndex, 4)));
