@@ -152,7 +152,7 @@ in different scoregroups (again, assuming their SB scores are the same). The
 "Median tiebreak" and "Median score" are defined analogously.
 
 For the Dutch system, the column C2 indicates whether a given player is eligible
-for the pairing-allocated bye (Y if yes, N if no). The C12 and C14 columns
+for the pairing-allocated bye (Y if yes, N if no). The C14 and C16 columns
 indicate the floating direction of the player on the previous and
 next-to-previous rounds, respectively (U for upfloat, D for downfloat).
 
