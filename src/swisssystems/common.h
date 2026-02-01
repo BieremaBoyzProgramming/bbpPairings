@@ -12,17 +12,6 @@
 
 namespace swisssystems
 {
-  enum SwissSystem
-  {
-#ifndef OMIT_DUTCH
-    DUTCH,
-#endif
-#ifndef OMIT_BURSTEIN
-    BURSTEIN,
-#endif
-    NONE
-  };
-
   /**
    * An exception indicating that no pairing satisfies the requirements imposed
    * by the system.
@@ -112,7 +101,29 @@ namespace swisssystems
    * Check whether the player is eligible for the bye under the normal
    * restrictions imposed on all Swiss systems.
    */
-  inline bool eligibleForBye(const tournament::Player &player)
+  inline bool eligibleForBye(
+    const tournament::Player &player,
+    const tournament::Tournament &tournament)
+  {
+    for (const tournament::Match &match : player.matches)
+    {
+      if (
+        !match.gameWasPlayed
+          && (tournament.getPoints(player, match) >= tournament.pointsForWin
+                || (match.participatedInPairing
+                      && match.opponent == player.id)))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Check whether the player is eligible for the bye under the normal
+   * restrictions imposed on all Swiss systems.
+   */
+  inline bool eligibleForByePre2025Rules(const tournament::Player &player)
   {
     for (const tournament::Match &match : player.matches)
     {
@@ -143,7 +154,7 @@ namespace swisssystems
     const std::deque<std::string> &,
     const std::function<std::deque<std::string>(const tournament::Player &)> &,
     const tournament::Tournament &,
-    const std::list<const tournament::Player *> &);
+    const std::vector<const tournament::Player *> &);
 
   /**
    * Set the weight of the edge between the two vertices to defaultEdgeWeight,

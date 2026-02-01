@@ -51,23 +51,19 @@ optional_cxxflags = \
 	-Wmissing-braces \
 	-Wmissing-declarations \
 	-Wmissing-include-dirs \
-	-Wnull-dereference \
 	-Woverloaded-virtual \
 	-Wpacked \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wsign-promo \
-	-Wstrict-overflow=4 \
+	-Wstrict-overflow=2 \
 	-Wsuggest-override \
 	-Wswitch-default \
 	-Wundef \
 	-Wunknown-pragmas \
 	-Wunused-macros \
 	-Wvla \
-	-Wzero-as-null-pointer-constant \
-	-Wno-free-nonheap-object \
-	-Wno-overflow \
-	-Wno-sign-compare
+	-Wzero-as-null-pointer-constant
 # Omitted because they were being triggered:
 # -Waggregate-return
 # -Wconversion
@@ -78,11 +74,12 @@ optional_cxxflags = \
 # -Winline
 # -Wlong-long
 # -Wnon-virtual-dtor
+# -Wnull-dereference
 # -Wold-style-cast
 # -Wpadded
 # -Wshadow
 # -Wsign-conversion
-# -Wstrict-overflow=5
+# -Wstrict-overflow=3
 # -Wswitch-enum
 # -Wsystem-headers
 
@@ -390,6 +387,12 @@ ifeq ($(COMP),clang)
 	# -Wweak-vtables
 endif
 
+optional_cxxflags += \
+	-Wno-deprecated-declarations \
+	-Wno-free-nonheap-object \
+	-Wno-overflow \
+	-Wno-sign-compare
+
 CXXFLAGS = $(optional_cxxflags)
 
 LDFLAGS = $(optional_ldflags) $(CXXFLAGS)
@@ -440,20 +443,21 @@ $(dist_name)/LICENSE.txt: \
 		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch \
 		$(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
 		| $(dist_name)/
-	$(if \
-		$(or \
-			$(filter win32,$(thread_model)), \
-			$(findstring winpthread,$(shell ldd $(OBJ)/bbpPairings.exe))), \
-		, \
-		$(error \
-			License file generation for statically-linked winpthreads has not been \
-				implemented))
 	mkdir -p $(dist_name)
 	cp LICENSE.txt $(dist_name)/LICENSE.txt
 	echo "" >> $(dist_name)/LICENSE.txt
 	patch -u $(prefix)/share/licenses/crt/COPYING.MinGW-w64-runtime.txt \
 		packaging/mingw-w64/COPYING.MinGW-w64-runtime.txt.patch -o /dev/stdout -s \
 		| cat >> $(dist_name)/LICENSE.txt
+ifeq (,$(filter win32 single,$(thread_model)))
+	if [[ $$(ldd $(OBJ)/bbpPairings.exe) != *"winpthread"* ]]; then \
+		echo "" >> $(dist_name)/LICENSE.txt; \
+		echo "libwinpthread licensing" >> $(dist_name)/LICENSE.txt; \
+		echo "***********************" >> $(dist_name)/LICENSE.txt; \
+		echo "" >> $(dist_name)/LICENSE.txt; \
+		cat $(prefix)/share/licenses/libwinpthread/COPYING >> $(dist_name)/LICENSE.txt; \
+	fi
+endif
 else ifeq ($(license_id),linux)
 $(dist_name)/LICENSE.txt: $(OBJ)/bbpPairings.exe | $(dist_name)/
 	cp LICENSE.txt $(dist_name)/LICENSE.txt

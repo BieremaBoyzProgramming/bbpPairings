@@ -15,8 +15,7 @@ a(swisssystems::burstein::matching_computer::edge_weight)
 #define MATCHING_EDGE_WEIGHTS_DUTCH(a)
 #else
 #define MATCHING_EDGE_WEIGHTS_DUTCH(a) \
-a(swisssystems::dutch::validity_matching_computer::edge_weight) \
-a(swisssystems::dutch::optimality_matching_computer::edge_weight)
+a(swisssystems::dutch::matching_computer::edge_weight)
 #endif
 
 // This macro is called in the cpp files of the matching code to instantiate the

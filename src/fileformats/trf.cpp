@@ -51,13 +51,12 @@ namespace fileformats
       template <typename T>
       tournament::player_index readPlayerId(const T &string)
       {
-        tournament::player_index playerId;
+        tournament::player_index value;
         try
         {
-          playerId =
+          value =
             utility::uintstringconversion
-                ::parse<tournament::player_index>(getSingleValue(string))
-              - 1u;
+                ::parse<tournament::player_index>(getSingleValue(string));
         }
         catch (const std::invalid_argument &)
         {
@@ -70,7 +69,13 @@ namespace fileformats
               + utility::uintstringconversion::toString(tournament::maxPlayers)
               + '.');
         }
-        return playerId;
+
+        if (!value)
+        {
+          throw InvalidLineException("player ID of 0");
+        }
+
+        return value - 1u;
       }
 
       /**
@@ -99,6 +104,39 @@ namespace fileformats
               + '.');
         }
         return score;
+      }
+
+      /**
+       * Trim whitespace and read a round index.
+       */
+      template <typename T>
+      tournament::round_index readRoundIndex(const T &string)
+      {
+        tournament::round_index value;
+        try
+        {
+          value =
+            utility::uintstringconversion
+                ::parse<tournament::round_index>(getSingleValue(string));
+        }
+        catch (const std::invalid_argument &)
+        {
+          throw InvalidLineException();
+        }
+        catch (const std::out_of_range &)
+        {
+          throw tournament::BuildLimitExceededException(
+            "This build only supports round indices up to "
+              + utility::uintstringconversion::toString(tournament::maxRounds)
+              + '.');
+        }
+
+        if (!value)
+        {
+          throw InvalidLineException("round index of 0");
+        }
+
+        return value - 1u;
       }
 
       /**
@@ -149,7 +187,7 @@ namespace fileformats
         std::u32string::size_type startIndex = 91u;
         for (
           ;
-          startIndex <= line.size() - 8u;
+          startIndex <= line.size() - 8u && startIndex >= 10u;
           startIndex += 10u)
         {
           /**
@@ -320,10 +358,7 @@ namespace fileformats
         tournament::Player player(id, score, rating, std::move(matches));
         if (id >= tournament.players.size())
         {
-          tournament.players.insert(
-            tournament.players.end(),
-            id - tournament.players.size(),
-            tournament::Player());
+          tournament.players.resize(id, tournament::Player());
           tournament.players.push_back(std::move(player));
         }
         else if (tournament.players[id].isValid)
@@ -334,8 +369,6 @@ namespace fileformats
         {
           player.accelerations =
             std::move(tournament.players[id].accelerations);
-          player.forbiddenPairs =
-            std::move(tournament.players[id].forbiddenPairs);
           tournament.players[id] = std::move(player);
         }
         tournament.playersByRank.push_back(id);
@@ -343,36 +376,130 @@ namespace fileformats
         {
           if (data->playerLines.size() <= id)
           {
-            data->playerLines.insert(
-              data->playerLines.end(),
-              id - data->playerLines.size() + 1u,
-              0);
+            data->playerLines.resize(id + 1u);
           }
           data->playerLines[id] = data->lines.size() - 1u;
         }
       }
 
       /**
-       * Process an XXA line.
+       * Process a 240 line.
        */
-      void readAccelerations(
+      void readByes(
+        const std::u32string &line,
+        std::deque<
+            std::pair<tournament::round_index, tournament::player_index>>
+          &byes)
+      {
+        if (line.size() < 11)
+        {
+          throw InvalidLineException();
+        }
+
+        const auto round = readRoundIndex(std::u32string(&line[6], &line[9]));
+
+        std::u32string::size_type startIndex = 10u;
+        for (
+          ;
+          startIndex <= line.size() - 4u && startIndex >= 5u;
+          startIndex += 5u)
+        {
+          byes.emplace_back(round, readPlayerId(line.substr(startIndex, 4)));
+        }
+        if (line.find_first_not_of(U" ", startIndex) < line.npos)
+        {
+          throw InvalidLineException();
+        }
+      }
+
+      /**
+       * Process a 250 line.
+       */
+      void readAccelerations250(
         const std::u32string &line,
         tournament::Tournament &tournament)
       {
-        tournament.defaultAcceleration = false;
+        if (line.length() < 31)
+        {
+          throw InvalidLineException();
+        }
+
+        const auto matchPointsString = std::u32string(&line[4], &line[8]);
+        if (matchPointsString != U"    " && readScore(matchPointsString))
+        {
+          throw InvalidLineException("match points must be empty");
+        }
+
+        const auto gamePoints = readScore(std::u32string(&line[9], &line[13]));
+        if (!gamePoints)
+        {
+          throw InvalidLineException("game points must be nonzero");
+        }
+
+        const auto roundStart = readRoundIndex(std::u32string(&line[14], &line[17]));
+        const auto roundEnd = readRoundIndex(std::u32string(&line[18], &line[21]));
+        if (roundStart > roundEnd)
+        {
+          throw InvalidLineException();
+        }
+
+        const auto firstPlayer = readPlayerId(std::u32string(&line[22], &line[26]));
+        const auto lastPlayer = readPlayerId(std::u32string(&line[27], &line[31]));
+        if (firstPlayer > lastPlayer)
+        {
+          throw InvalidLineException();
+        }
+
+        if (lastPlayer >= tournament.players.size())
+        {
+          tournament.players.resize(lastPlayer + 1u, tournament::Player());
+        }
+
+        for (
+          auto playerIndex = firstPlayer;
+          playerIndex <= lastPlayer;
+          ++playerIndex)
+        {
+          auto &player = tournament.players[playerIndex];
+          if (player.accelerations.size() < roundStart)
+          {
+            player.accelerations.resize(roundStart);
+          }
+
+          if (roundStart < player.accelerations.size())
+          {
+            std::fill(
+              &player.accelerations[roundStart],
+              &player.accelerations[
+                std::min(roundEnd + 1u, player.accelerations.size())],
+              gamePoints);
+          }
+          if (player.accelerations.size() <= roundEnd)
+          {
+            player.accelerations.resize(roundEnd + 1u, gamePoints);
+          }
+        }
+      }
+
+      /**
+       * Process an XXA line.
+       */
+      void readPlayerAccelerationsXxa(
+        const std::u32string &line,
+        tournament::Tournament &tournament)
+      {
         const tournament::player_index playerId =
           readPlayerId(std::u32string(&line[4], &line[8]));
         if (playerId >= tournament.players.size())
         {
-          tournament.players.insert(
-            tournament.players.end(),
-            playerId - tournament.players.size() + 1,
+          tournament.players.resize(
+            playerId + 1u,
             tournament::Player());
         }
         std::u32string::size_type startIndex = 9;
         for (
           ;
-          startIndex + 4 <= line.size();
+          startIndex + 4 <= line.size() && startIndex >= 5u;
           startIndex += 5)
         {
           const tournament::points points =
@@ -389,9 +516,44 @@ namespace fileformats
       }
 
       /**
+       * Process a 260 line.
+       */
+      tournament::ForbiddenPairsEntry readForbiddenPairs260(
+        const std::u32string &line)
+      {
+        if (line.size() < 18)
+        {
+          throw InvalidLineException();
+        }
+
+        const auto firstRound = readRoundIndex(std::u32string(&line[4], &line[7]));
+        const auto lastRound = readRoundIndex(std::u32string(&line[8], &line[11]));
+
+        std::deque<tournament::player_index> players;
+
+        std::u32string::size_type startIndex = 12u;
+        for (
+          ;
+          startIndex <= line.size() - 4u && startIndex >= 5u;
+          startIndex += 5u)
+        {
+          players.push_back(readPlayerId(line.substr(startIndex, 4)));
+        }
+        if (line.find_first_not_of(U" ", startIndex) < line.npos)
+        {
+          throw InvalidLineException();
+        }
+
+        return tournament::ForbiddenPairsEntry(
+          std::move(players),
+          firstRound,
+          lastRound + 1u);
+      }
+
+      /**
        * Process an XXP line.
        */
-      std::deque<tournament::player_index> readForbiddenPairs(
+      std::deque<tournament::player_index> readForbiddenPairsXxp(
         const std::u32string &line)
       {
         std::deque<tournament::player_index> result;
@@ -403,6 +565,69 @@ namespace fileformats
           ++tokenizer;
         }
         return result;
+      }
+
+      /**
+       * Process a 162 line.
+       */
+      void readPointSystem(
+        const std::u32string &line,
+        tournament::Tournament &tournament,
+        bool &usePairingAllocatedByeScore)
+      {
+        if (line.size() < 10)
+        {
+          throw InvalidLineException();
+        }
+
+        std::u32string::size_type startIndex = 5u;
+        for (
+          ;
+          startIndex <= line.size() - 5u && startIndex >= 5u;
+          startIndex += 9u)
+        {
+          const auto resultChar = line[startIndex];
+          const auto score = readScore(line.substr(startIndex + 1, 4));
+
+          if (resultChar == U'W')
+          {
+            tournament.pointsForWin = score;
+            if (!usePairingAllocatedByeScore)
+            {
+              tournament.pointsForPairingAllocatedBye = score;
+            }
+          }
+          else if (resultChar == U'D')
+          {
+            tournament.pointsForDraw = score;
+          }
+          else if (resultChar == U'L')
+          {
+            tournament.pointsForLoss = score;
+          }
+          else if (resultChar == U'Z')
+          {
+            tournament.pointsForZeroPointBye = score;
+            tournament.pointsForForfeitLoss = score;
+          }
+          else if (resultChar == U'P')
+          {
+            tournament.pointsForPairingAllocatedBye = score;
+            usePairingAllocatedByeScore = true;
+          }
+          else if (resultChar == U'X')
+          {
+            throw InvalidLineException("symbol X not supported");
+          }
+          else
+          {
+            throw InvalidLineException();
+          }
+        }
+        if (line.find_first_not_of(U" ", startIndex) < line.npos)
+        {
+          throw InvalidLineException();
+        }
       }
 
       /**
@@ -452,9 +677,8 @@ namespace fileformats
         {
           if (player.isValid && player.matches.size() < tournament.playedRounds)
           {
-            player.matches.insert(
-              player.matches.end(),
-              tournament.playedRounds - player.matches.size(),
+            player.matches.resize(
+              tournament.playedRounds,
               tournament::Match(player.id));
           }
         }
@@ -478,6 +702,54 @@ namespace fileformats
           tournament::Player &player = tournament.players[playerIndex];
 
           player.rankIndex = rankIndex++;
+        }
+      }
+
+      void applyBakuAcceleration(tournament::Tournament &tournament)
+      {
+        if (
+          tournament.pointsForLoss
+            || tournament.pointsForDraw + tournament.pointsForDraw
+                != tournament.pointsForWin
+            // Check for overflow in the above
+            || tournament.pointsForWin < tournament.pointsForDraw)
+        {
+          throw FileFormatException(
+            "Point system is inconsistent with Baku acceleration method.");
+        }
+
+        if (!tournament.playersByRank.size() || !tournament.expectedRounds)
+          return;
+
+        const tournament::player_index lastAcceleratedRank =
+          (tournament.playersByRank.size() - 1u) / 2u;
+        const auto lastAccelerationRound = (tournament.expectedRounds - 1u) / 2u;
+        const auto lastFullAccelerationRound = lastAccelerationRound / 2u;
+        for (
+          tournament::player_index rankIndex{ };
+          rankIndex <= lastAcceleratedRank;
+          ++rankIndex)
+        {
+          auto &player = tournament.players[tournament.playersByRank[rankIndex]];
+          tournament::round_index roundIndex{ };
+
+          for (
+            ;
+            roundIndex <= lastFullAccelerationRound
+              && roundIndex <= tournament.playedRounds;
+            ++roundIndex)
+          {
+            player.accelerations.push_back(tournament.pointsForWin);
+          }
+
+          for (
+            ;
+            roundIndex <= lastAccelerationRound
+              && roundIndex <= tournament.playedRounds;
+            ++roundIndex)
+          {
+            player.accelerations.push_back(tournament.pointsForDraw);
+          }
         }
       }
 
@@ -777,6 +1049,12 @@ namespace fileformats
       tournament::Tournament result;
       bool useRank{ };
       bool usePairingAllocatedByeScore{ };
+      bool isAccelerationSpecifiedManually{ };
+      bool isBakuAccelerationSpecified{ };
+      std::deque<std::deque<tournament::player_index>>
+        universallyForbiddenPairs;
+      std::deque<std::pair<tournament::round_index, tournament::player_index>>
+        byes;
       std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert;
       std::string buffer;
       while (stream.good())
@@ -809,15 +1087,34 @@ namespace fileformats
               {
                 readPlayer(line, result, data);
               }
+              else if (prefix == U"013" || prefix == U"310")
+              {
+                throw
+                  InvalidLineException("team tournaments are not supported");
+              }
+              else if (prefix == U"240")
+              {
+                readByes(line, byes);
+              }
+              else if (prefix == U"250")
+              {
+                isAccelerationSpecifiedManually = true;
+                readAccelerations250(line, result);
+              }
               else if (prefix == U"XXA")
               {
-                readAccelerations(line, result);
+                isAccelerationSpecifiedManually = true;
+                readPlayerAccelerationsXxa(line, result);
+              }
+              else if (prefix == U"260")
+              {
+                result.forbiddenPairs.push_back(readForbiddenPairs260(line));
               }
               else if (prefix == U"XXP")
               {
-                result.forbidPairs(readForbiddenPairs(line));
+                universallyForbiddenPairs.push_back(readForbiddenPairsXxp(line));
               }
-              else if (prefix == U"XXR")
+              else if (prefix == U"142" || prefix == U"XXR")
               {
                 try
                 {
@@ -879,6 +1176,31 @@ namespace fileformats
                   }
                 }
               }
+              else if (prefix == U"152")
+              {
+                if (line.length() != 5)
+                {
+                  throw InvalidLineException();
+                }
+
+                const auto c = line[4];
+                if (c == U'W')
+                {
+                  result.initialColor = tournament::COLOR_WHITE;
+                }
+                else if (c == U'B')
+                {
+                  result.initialColor = tournament::COLOR_BLACK;
+                }
+                else
+                {
+                  throw InvalidLineException();
+                }
+              }
+              else if (prefix == U"162")
+              {
+                readPointSystem(line, result, usePairingAllocatedByeScore);
+              }
               else if (prefix == U"BBW")
               {
                 result.pointsForWin = readPoints(line);
@@ -908,11 +1230,59 @@ namespace fileformats
                 result.pointsForPairingAllocatedBye = readPoints(line);
                 usePairingAllocatedByeScore = true;
               }
+              else if (prefix == U"192")
+              {
+                if (line.length() < 5)
+                {
+                  throw InvalidLineException();
+                }
+
+                const auto tournamentType = line.substr(4);
+                if (
+                  tournamentType == U"FIDE_DUTCH_2025"
+                    || tournamentType == U"FIDE_DUTCH")
+                {
+                  result.swissSystem = swisssystems::DUTCH;
+                  isBakuAccelerationSpecified = false;
+                }
+                else if (
+                  tournamentType == U"FIDE_DUTCH_2025_BAKU"
+                    || tournamentType == U"FIDE_DUTCH_BAKU")
+                {
+                  result.swissSystem = swisssystems::DUTCH;
+                  isBakuAccelerationSpecified = true;
+                }
+                else if (tournamentType == U"FIDE_BURSTEIN")
+                {
+                  result.swissSystem = swisssystems::BURSTEIN;
+                  isBakuAccelerationSpecified = false;
+                }
+                else if (tournamentType == U"FIDE_BURSTEIN_BAKU")
+                {
+                  result.swissSystem = swisssystems::BURSTEIN;
+                  isBakuAccelerationSpecified = true;
+                }
+                else
+                {
+                  throw InvalidLineException("unsupported tournament type");
+                }
+              }
+              else if (prefix == U"299")
+              {
+                throw InvalidLineException(
+                  "abnormal assignment points are not yet supported");
+              }
             }
             catch (const InvalidLineException &exception)
             {
               throw FileFormatException(
-                "Invalid line \"" + convert.to_bytes(line) + "\"");
+                "Invalid line "
+                  + (exception.explanation.empty()
+                      ? ""
+                      : "(" + exception.explanation + ") ")
+                  + "\""
+                  + convert.to_bytes(line)
+                  + "\"");
             }
           }
 
@@ -947,6 +1317,33 @@ namespace fileformats
         result.expectedRounds = result.playedRounds;
       }
       computePlayerIndexes(result, useRank);
+
+      if (includesUnpairedRound)
+      {
+        for (const auto &pair : byes)
+        {
+          if (pair.first != result.playedRounds)
+            continue;
+
+          auto &player = result.players[pair.second];
+          if (player.matches.size() <= result.playedRounds)
+          {
+            player.matches.emplace_back(player.id);
+          }
+        }
+      }
+
+      if (!isAccelerationSpecifiedManually && isBakuAccelerationSpecified)
+      {
+        applyBakuAcceleration(result);
+      }
+      result.defaultAcceleration =
+        !isAccelerationSpecifiedManually && !isBakuAccelerationSpecified;
+      for (auto &entry : universallyForbiddenPairs)
+      {
+        result.forbiddenPairs.emplace_back(std::move(entry), 0u, result.expectedRounds);
+      }
+
       if (result.initialColor == tournament::COLOR_NONE)
       {
         result.initialColor = inferFirstColor(result);
@@ -971,7 +1368,7 @@ namespace fileformats
       if (tournament.playedRounds < tournament.expectedRounds)
       {
         outputStream
-          << "XXR "
+          << "142 "
           << utility::uintstringconversion::toString(tournament.expectedRounds)
           << '\r';
       }
@@ -1009,6 +1406,20 @@ namespace fileformats
       }
       outputStream << '\r';
 
+      outputStream << "092 ";
+      switch (tournament.swissSystem)
+      {
+      case swisssystems::DUTCH:
+        outputStream << "FIDE_DUTCH_2025";
+        break;
+      case swisssystems::BURSTEIN:
+        outputStream << "FIDE_BURSTEIN";
+        break;
+      default:
+        throw LimitExceededException("Unexpected Swiss system.");
+      }
+      outputStream << '\r';
+
       if (
         tournament.pointsForWin != 10u
           || tournament.pointsForDraw != 5u
@@ -1028,83 +1439,64 @@ namespace fileformats
           throw LimitExceededException(
             "The output file format does not support scores above 99.9.");
         }
-        if (
-          tournament.pointsForWin != 10u
-            || tournament.pointsForDraw != 5u
-            || tournament.pointsForLoss != 0u
-            || tournament.pointsForZeroPointBye != 0u
-            || tournament.pointsForForfeitLoss != 0u)
+        if (tournament.pointsForForfeitLoss != tournament.pointsForZeroPointBye)
         {
-          outputStream << "BBW "
-            << std::setw(4)
-            << utility::uintstringconversion
-                ::toString(tournament.pointsForWin, 1)
-            << "\rBBD "
-            << std::setw(4)
-            << utility::uintstringconversion
-                ::toString(tournament.pointsForDraw, 1)
-            << "\r";
+          throw LimitExceededException(
+            "The output file format does not allow points for forfeit losses "
+              "and zero-point byes to differ.");
         }
-        if (
-          tournament.pointsForLoss != 0u
-            || tournament.pointsForZeroPointBye != 0u
-            || tournament.pointsForForfeitLoss != 0u)
+        outputStream << "162  ";
+        int codeWidth = 1;
+        if (tournament.pointsForWin != 10u)
         {
-          outputStream
-            << "BBL "
+          outputStream << "W"
             << std::setw(4)
             << utility::uintstringconversion
-                ::toString(tournament.pointsForLoss, 1)
-            << "\rBBZ "
-            << std::setw(4)
-            << utility::uintstringconversion
-                ::toString(tournament.pointsForZeroPointBye, 1)
-            << "\rBBF "
-            << std::setw(4)
-            << utility::uintstringconversion
-                ::toString(tournament.pointsForForfeitLoss, 1)
-            << "\r";
+                ::toString(tournament.pointsForWin, 1);
+          codeWidth = 5;
         }
-        if (tournament.pointsForWin != tournament.pointsForPairingAllocatedBye)
+        if (tournament.pointsForDraw != 5u)
         {
-          outputStream
-            << "BBU "
+          outputStream << std::setw(codeWidth)
+            << "D"
             << std::setw(4)
             << utility::uintstringconversion
-                ::toString(tournament.pointsForPairingAllocatedBye, 1)
-            << "\r";
+                ::toString(tournament.pointsForDraw, 1);
+          codeWidth = 5;
+        }
+        if (tournament.pointsForLoss != 0u)
+        {
+          outputStream << std::setw(codeWidth)
+            << "L"
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForLoss, 1);
+          codeWidth = 5;
+        }
+        if (tournament.pointsForForfeitLoss != 0u)
+        {
+          outputStream << std::setw(codeWidth)
+            << "A"
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForForfeitLoss, 1);
+          codeWidth = 5;
+        }
+        if (tournament.pointsForPairingAllocatedBye != tournament.pointsForWin)
+        {
+          outputStream << std::setw(codeWidth)
+            << "P"
+            << std::setw(4)
+            << utility::uintstringconversion
+                ::toString(tournament.pointsForPairingAllocatedBye, 1);
         }
         outputStream << "\r";
       }
 
       if (!tournament.defaultAcceleration)
       {
-        for (const tournament::Player &player : tournament.players)
-        {
-          if (!player.accelerations.empty())
-          {
-            outputStream << "XXA "
-              << std::setfill(' ')
-              << std::right
-              << std::setw(4)
-              << utility::uintstringconversion::toString(player.id + 1u);
-            for (
-              const tournament::points playerAcceleration : player.accelerations
-            )
-            {
-              if (playerAcceleration > 999u)
-              {
-                throw LimitExceededException(
-                  "The output file format does not support scores above 99.9.");
-              }
-              outputStream << std::setw(5)
-                << utility::uintstringconversion
-                    ::toString(playerAcceleration, 1);
-            }
-
-            outputStream << '\r';
-          }
-        }
+        throw LimitExceededException(
+          "Outputting accelerations is not currently supported.");
       }
     }
 
@@ -1136,18 +1528,25 @@ namespace fileformats
       bool roundsLine;
       for (const std::u32string &line : modelFileData.lines)
       {
-        if (line.length() >= 3 && line.substr(0, 3) == U"XXR")
+        if (line.length() < 3)
+        {
+          outputStream << convert.to_bytes(line) << '\r';
+          continue;
+        }
+        const auto prefix = line.substr(0, 3);
+        if (prefix == U"XXR" || prefix == U"142")
         {
           roundsLine = true;
         }
-        if (line.length() < 3 || line.substr(0, 3) != U"012")
+        if (prefix == U"012" || prefix == U"240" || prefix == U"152")
         {
-          outputStream << convert.to_bytes(line) << '\r';
+          outputStream << "### ";
         }
+        outputStream << convert.to_bytes(line) << '\r';
       }
       if (!roundsLine)
       {
-        outputStream << "XXR "
+        outputStream << "142 "
           << utility::uintstringconversion::toString(tournament.expectedRounds)
           << '\r';
       }

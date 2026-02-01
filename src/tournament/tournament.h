@@ -32,6 +32,20 @@
 #define TOURNAMENT_MAX_RATING 9999
 #endif
 
+namespace swisssystems
+{
+  enum SwissSystem
+  {
+#ifndef OMIT_DUTCH
+    DUTCH,
+#endif
+#ifndef OMIT_BURSTEIN
+    BURSTEIN,
+#endif
+    NONE
+  };
+}
+
 namespace tournament
 {
   struct Tournament;
@@ -124,18 +138,26 @@ namespace tournament
     { }
   };
 
+  typedef std::vector<Match> matches_vector;
+  typedef
+    utility::typesizes
+      ::smallest<
+#ifdef MAX_ROUNDS
+        utility::uinttypes::uint_least_for_value<MAX_ROUNDS>,
+#endif
+        matches_vector::size_type,
+        std::string::size_type
+      >::type
+    round_index;
+
   struct Player
   {
-    std::vector<Match> matches;
+    matches_vector matches;
     /**
      * Round-indexed accelerations. If the vector is shorter than the number of
      * rounds, zeroes are implied.
      */
     std::vector<points> accelerations;
-    /**
-     * The player may not be paired against these opponents.
-     */
-    std::unordered_set<player_index> forbiddenPairs;
 
     decltype(matches)::size_type colorImbalance{ };
 
@@ -154,6 +176,8 @@ namespace tournament
      */
     tournament::rating rating;
 
+    round_index playedGames{ };
+
     points scoreWithoutAcceleration;
 
     Color colorPreference = COLOR_NONE;
@@ -171,11 +195,8 @@ namespace tournament
         const player_index id_,
         const points points_,
         const tournament::rating rating_,
-        std::vector<Match> &&matches_ = std::vector<Match>(),
-        std::unordered_set<player_index> &&forbiddenPairs_ =
-          std::unordered_set<player_index>())
+        std::vector<Match> &&matches_ = std::vector<Match>())
       : matches(std::move(matches_)),
-        forbiddenPairs(std::move(forbiddenPairs_)),
         id(id_),
         rankIndex(id_),
         rating(rating_),
@@ -232,16 +253,6 @@ namespace tournament
             player0->rankIndex);
   }
 
-  typedef
-    utility::typesizes
-      ::smallest<
-#ifdef MAX_ROUNDS
-        utility::uinttypes::uint_least_for_value<MAX_ROUNDS>,
-#endif
-        decltype(std::declval<Player>().matches)::size_type,
-        std::string::size_type
-      >::type
-    round_index;
   constexpr round_index maxRounds =
 #ifdef MAX_ROUNDS
     utility::typesizes::minUint(
@@ -252,6 +263,22 @@ namespace tournament
     )
 #endif
     ;
+
+  struct ForbiddenPairsEntry
+  {
+    std::deque<player_index> players;
+    round_index roundStart;
+    round_index roundEnd;
+
+    ForbiddenPairsEntry(
+        std::deque<player_index> &&players_,
+        round_index roundStart_,
+        round_index roundEnd_)
+      : players(std::move(players_)),
+        roundStart(roundStart_),
+        roundEnd(roundEnd_)
+    { }
+  };
 
   /**
    * A struct representing the details and history of a tournament.
@@ -276,7 +303,9 @@ namespace tournament
     points pointsForForfeitLoss{ 0u };
     points pointsForPairingAllocatedBye{ 10u };
     Color initialColor = COLOR_NONE;
+    swisssystems::SwissSystem swissSystem = swisssystems::NONE;
     bool defaultAcceleration = true;
+    std::deque<ForbiddenPairsEntry> forbiddenPairs;
 
     points getPoints(const Player &player, const Match &match) const &
     {
@@ -292,7 +321,8 @@ namespace tournament
           : pointsForDraw;
     }
 
-    void forbidPairs(const std::deque<player_index> &) &;
+    std::vector<std::unordered_set<player_index>>
+      resolveForbiddenPairs(round_index) const &;
 
     void updateRanks() &;
     void computePlayerData() &;

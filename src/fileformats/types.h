@@ -31,7 +31,10 @@ namespace fileformats
    */
   struct InvalidLineException : public FileReaderException
   {
-    InvalidLineException() : FileReaderException("") { }
+    const std::string explanation;
+
+    InvalidLineException(std::string &&explanation_ = "")
+      : FileReaderException(""), explanation(std::move(explanation_)) { }
   };
 
   /**
