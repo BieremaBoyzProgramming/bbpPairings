@@ -1,6 +1,8 @@
 *.o
 *.exe
 *.d
+build/
 bbpPairings*
+demo.trf
 test/test-includes.h
 test/tests/*.output

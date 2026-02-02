@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<body>
+  <script type="module">
+    import BbpPairingModule from './build/bbpPairing.js';
+    
+    const pairingEngine = await BbpPairingModule();
+
+    const trf = await (await fetch("demo.trf")).text();
+    console.log("Input TRF:", trf);
+
+    const result = pairingEngine.pairing(trf);
+    console.log("Result:", result);
+
+    const pairings = JSON.parse(result);
+    console.log("Pairings:", pairings);
+  </script>
+
+  Check the console for output.
+</body>
+</html>
