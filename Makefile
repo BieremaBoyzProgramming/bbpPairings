@@ -96,8 +96,18 @@ endif
 optional_cxxflags += -DVERSION_INFO=$(version_info)
 
 ifeq ($(COMP),gcc)
-	comp_version := \
-		$(shell g++ -v 2>&1 | sed -n 's/^gcc version \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
+	# Check if g++ is actually clang (common on macOS)
+	is_apple_clang := $(shell g++ -v 2>&1 | grep -q "Apple clang version" && echo yes)
+	ifeq ($(is_apple_clang),yes)
+		# g++ is actually Apple clang, treat as clang
+		COMP = clang
+		actual_compiler = clang
+	else
+		# Real GCC
+		comp_version := \
+			$(shell g++ -v 2>&1 | sed -n 's/^gcc version \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
+		actual_compiler = gcc
+	endif
 	target = $(shell g++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
 	prefix = $(shell g++ -v 2>&1 | sed -n -e 's/.*--prefix=\([^ ]*\).*/\1/p')
 	thread_model = $(shell g++ -v 2>&1 | sed -n -e 's/Thread model: \(.*\)/\1/p')
@@ -107,14 +117,23 @@ ifeq ($(COMP),gcc)
 	else ifeq ($(target),pc-linux-gnu)
 		license_id = linux
 		target_os = linux
+	else ifneq (,$(findstring apple-darwin,$(target)))
+		# macOS detection for any darwin version
+		target_os = macos
 	endif
 endif
 ifeq ($(COMP),clang)
-	target = $(shell clang++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
+	# If we haven't already extracted the target (from the gcc section when g++ is clang)
+	ifeq ($(target),)
+		target = $(shell clang++ -v 2>&1 | sed -n -e 's/Target: [^-]*-\(.*\)/\1/p')
+	endif
 	ifeq ($(target),w64-windows-gnu)
 		target_os = windows
 	else ifeq ($(target),pc-linux-gnu)
 		target_os = linux
+	else ifneq (,$(findstring apple-darwin,$(target)))
+		# macOS detection
+		target_os = macos
 	endif
 endif
 
@@ -140,7 +159,9 @@ else
 		endif
 	else
 		optional_cxxflags += -DNDEBUG
-		optional_ldflags += -s
+		ifneq ($(target_os),macos)
+			optional_ldflags += -s
+		endif
 		ifeq ($(optimize),yes)
 			optional_cxxflags += -O3
 		endif
@@ -181,63 +202,77 @@ endif
 
 ifeq ($(COMP),gcc)
 	CXX=g++
-	comp_version_major := \
-		$(shell echo $(comp_version) | sed 's/\([0-9]*\)\..*/\1/')
-	comp_version_at_least_11 := \
-		$(shell [ $(comp_version_major) -ge 11 ] && echo 1)
-	# The warning flags included for GCC are based on GCC 11.2.
-	optional_cxxflags += \
-		-Wabi=0 \
-		-Waligned-new=all \
-		-Walloc-zero \
-		-Warray-bounds=2 \
-		$(if $(comp_version_at_least_11),-Warray-parameter=2) \
-		-Wattribute-alias=2 \
-		-Wcast-align=strict \
-		-Wcatch-value=3 \
-		-Wconditionally-supported \
-		$(if $(comp_version_at_least_11),-Wctad-maybe-unsupported) \
-		-Wduplicated-cond \
-		$(if $(comp_version_at_least_11),-Wenum-conversion) \
-		-Wformat-overflow=2 \
-		-Wformat-signedness \
-		-Wformat-truncation=2 \
-		-Wimplicit-fallthrough=3 \
-		$(if $(comp_version_at_least_11),-Winvalid-imported-macros) \
-		-Wlogical-op \
-		-Wmultiple-inheritance \
-		-Wnormalized=nfkc \
-		-Wplacement-new=2 \
-		-Wredundant-tags \
-		-Wshadow=local \
-		-Wstrict-null-sentinel \
-		-Wstringop-overflow=4 \
-		-Wsuggest-attribute=cold \
-		-Wsuggest-attribute=format \
-		-Wsuggest-attribute=malloc \
-		-Wsuggest-attribute=noreturn \
-		-Wsuggest-final-methods \
-		-Wsuggest-final-types \
-		-Wsync-nand \
-		-Wtrampolines \
-		-Wunsafe-loop-optimizations \
-		-Wvector-operation-performance \
-		-Wvirtual-inheritance \
-		-Wno-maybe-uninitialized
-	# Omitted because they were being triggered:
-	# -Wabi-tag
-	# -Warith-conversion
-	# -Wduplicated-branches
-	# -Wnamespaces
-	# -Wsuggest-attribute=const
-	# -Wsuggest-attribute=pure
-	# -Wtemplates
-	# -Wuseless-cast
-endif
+	# Only apply GCC-specific flags if it's real GCC, not Apple clang
+	ifeq ($(actual_compiler),gcc)
+		comp_version_major := \
+			$(shell echo $(comp_version) | sed 's/\([0-9]*\)\..*/\1/')
+		comp_version_at_least_11 := \
+			$(shell [ $(comp_version_major) -ge 11 ] && echo 1)
+		# The warning flags included for GCC are based on GCC 11.2.
+		optional_cxxflags += \
+			-Wabi=0 \
+			-Waligned-new=all \
+			-Walloc-zero \
+			-Warray-bounds=2 \
+			$(if $(comp_version_at_least_11),-Warray-parameter=2) \
+			-Wattribute-alias=2 \
+			-Wcast-align=strict \
+			-Wcatch-value=3 \
+			-Wconditionally-supported \
+			$(if $(comp_version_at_least_11),-Wctad-maybe-unsupported) \
+			-Wduplicated-cond \
+			$(if $(comp_version_at_least_11),-Wenum-conversion) \
+			-Wformat-overflow=2 \
+			-Wformat-signedness \
+			-Wformat-truncation=2 \
+			-Wimplicit-fallthrough=3 \
+			$(if $(comp_version_at_least_11),-Winvalid-imported-macros) \
+			-Wlogical-op \
+			-Wmultiple-inheritance \
+			-Wnormalized=nfkc \
+			-Wplacement-new=2 \
+			-Wredundant-tags \
+			-Wshadow=local \
+			-Wstrict-null-sentinel \
+			-Wstringop-overflow=4 \
+			-Wsuggest-attribute=cold \
+			-Wsuggest-attribute=format \
+			-Wsuggest-attribute=malloc \
+			-Wsuggest-attribute=noreturn \
+			-Wsuggest-final-methods \
+			-Wsuggest-final-types \
+			-Wsync-nand \
+			-Wtrampolines \
+			-Wunsafe-loop-optimizations \
+			-Wvector-operation-performance \
+			-Wvirtual-inheritance \
+			-Wno-maybe-uninitialized
+		# Omitted because they were being triggered:
+		# -Wabi-tag
+		# -Warith-conversion
+		# -Wduplicated-branches
+		# -Wnamespaces
+		# -Wsuggest-attribute=const
+		# -Wsuggest-attribute=pure
+		# -Wtemplates
+		# -Wuseless-cast
+	endif  # actual_compiler == gcc
+endif  # COMP == gcc
 ifeq ($(COMP),clang)
 	CXX=clang++
 	# The warning flags included for Clang are based on Clang 13.
-	optional_cxxflags += \
+	# Note: Some flags are excluded on macOS to avoid build issues
+	ifeq ($(target_os),macos)
+		# Use a minimal set of flags for macOS to avoid compatibility issues
+		optional_cxxflags += \
+			-Wmost \
+			-Wextra \
+			-Wno-deprecated-declarations \
+			-Wno-uninitialized \
+			-Wno-sign-compare
+	else
+		# Full set of warning flags for non-macOS platforms
+		optional_cxxflags += \
 		-Wabstract-vbase-init \
 		-Wanon-enum-enum-conversion \
 		-Warc-repeated-use-of-weak \
@@ -375,17 +410,18 @@ ifeq ($(COMP),clang)
 		-Wimplicit-const-int-float-conversion \
 		-Wsometimes-uninitialized \
 		-Wstatic-self-init
-	# Omitted because they were being triggered:
-	# -Wc++11-compat-pedantic
-	# -Wc++98-compat-pedantic
-	# -Wconditional-uninitialized
-	# -Wundefined-func-template
-	# -Wuninitialized-const-reference
-	# -Wunused-exception-parameter
-	# -Wunused-template
-	# -Wweak-template-vtables
-	# -Wweak-vtables
-endif
+		# Omitted because they were being triggered:
+		# -Wc++11-compat-pedantic
+		# -Wc++98-compat-pedantic
+		# -Wconditional-uninitialized
+		# -Wundefined-func-template
+		# -Wuninitialized-const-reference
+		# -Wunused-exception-parameter
+		# -Wunused-template
+		# -Wweak-template-vtables
+		# -Wweak-vtables
+	endif  # target_os != macos
+endif  # COMP == clang
 
 optional_cxxflags += \
 	-Wno-deprecated-declarations \
