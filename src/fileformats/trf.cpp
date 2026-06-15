@@ -605,7 +605,7 @@ namespace fileformats
           {
             tournament.pointsForLoss = score;
           }
-          else if (resultChar == U'Z')
+          else if (resultChar == U'A')
           {
             tournament.pointsForZeroPointBye = score;
             tournament.pointsForForfeitLoss = score;
