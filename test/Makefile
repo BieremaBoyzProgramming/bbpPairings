@@ -1,3 +1,7 @@
+# Detect if g++ is actually clang (common on macOS)
+is_apple_clang := $(shell g++ -v 2>&1 | grep -q "Apple clang version" && echo yes)
+
+# Basic warning flags that work on both gcc and clang
 optional_cxxflags = \
 	-std=c++20 \
 	-ftabstop=2 \
@@ -5,83 +9,95 @@ optional_cxxflags = \
 	-Wfatal-errors \
 	-pedantic \
 	-pedantic-errors \
-	-Wabi=0 \
-	-Waligned-new=all \
 	-Wall \
-	-Walloc-zero \
-	-Walloca \
-	-Warith-conversion \
-	-Warray-bounds=2 \
-	-Warray-parameter=2 \
-	-Wattribute-alias=2 \
-	-Wcast-align=strict \
+	-Wextra \
 	-Wcast-qual \
-	-Wcatch-value=3 \
-	-Wconditionally-supported \
-	-Wconversion \
-	-Wctad-maybe-unsupported \
 	-Wctor-dtor-privacy \
-	-Wdate-time \
 	-Wdisabled-optimization \
 	-Wdouble-promotion \
-	-Wduplicated-branches \
-	-Wduplicated-cond \
-	-Weffc++ \
-	-Wenum-conversion \
-	-Wextra \
 	-Wextra-semi \
-	-Wfloat-equal \
 	-Wformat=2 \
-	-Wformat-overflow=2 \
-	-Wformat-signedness \
-	-Wformat-truncation=2 \
-	-Wimplicit-fallthrough=3 \
-	-Winline \
-	-Winvalid-imported-macros \
 	-Winvalid-pch \
-	-Wlogical-op \
-	-Wlong-long \
 	-Wmismatched-tags \
 	-Wmissing-braces \
 	-Wmissing-include-dirs \
-	-Wmultiple-inheritance \
-	-Wnormalized=nfkc \
 	-Wnull-dereference \
-	-Wold-style-cast \
 	-Woverloaded-virtual \
 	-Wpacked \
-	-Wpadded \
-	-Wplacement-new=2 \
 	-Wpointer-arith \
 	-Wredundant-decls \
-	-Wredundant-tags \
-	-Wshadow \
-	-Wsign-conversion \
 	-Wsign-promo \
-	-Wstrict-null-sentinel \
-	-Wstrict-overflow=5 \
-	-Wstringop-overflow=4 \
-	-Wsuggest-attribute=cold \
-	-Wsuggest-attribute=const \
-	-Wsuggest-attribute=format \
-	-Wsuggest-attribute=malloc \
-	-Wsuggest-attribute=noreturn \
-	-Wsuggest-attribute=pure \
-	-Wsuggest-final-methods \
-	-Wsuggest-final-types \
 	-Wsuggest-override \
 	-Wswitch-default \
-	-Wswitch-enum \
-	-Wsync-nand \
-	-Wtrampolines \
 	-Wundef \
-	-Wunsafe-loop-optimizations \
 	-Wunused-macros \
-	-Wuseless-cast \
-	-Wvector-operation-performance \
-	-Wvirtual-inheritance \
 	-Wvla \
 	-Wzero-as-null-pointer-constant
+
+# Add compiler-specific flags
+ifeq ($(is_apple_clang),yes)
+	# Minimal flags for macOS clang
+	optional_cxxflags += \
+		-Wno-deprecated-declarations \
+		-Wno-uninitialized \
+		-Wno-sign-compare
+else
+	# GCC-specific flags (for real GCC on Linux)
+	optional_cxxflags += \
+		-Wabi=0 \
+		-Waligned-new=all \
+		-Walloc-zero \
+		-Walloca \
+		-Warith-conversion \
+		-Warray-bounds=2 \
+		-Warray-parameter=2 \
+		-Wattribute-alias=2 \
+		-Wcast-align=strict \
+		-Wcatch-value=3 \
+		-Wconditionally-supported \
+		-Wconversion \
+		-Wctad-maybe-unsupported \
+		-Wdate-time \
+		-Wduplicated-branches \
+		-Wduplicated-cond \
+		-Weffc++ \
+		-Wenum-conversion \
+		-Wfloat-equal \
+		-Wformat-overflow=2 \
+		-Wformat-signedness \
+		-Wformat-truncation=2 \
+		-Wimplicit-fallthrough=3 \
+		-Winline \
+		-Winvalid-imported-macros \
+		-Wlogical-op \
+		-Wlong-long \
+		-Wmultiple-inheritance \
+		-Wnormalized=nfkc \
+		-Wold-style-cast \
+		-Wpadded \
+		-Wplacement-new=2 \
+		-Wredundant-tags \
+		-Wshadow \
+		-Wsign-conversion \
+		-Wstrict-null-sentinel \
+		-Wstrict-overflow=5 \
+		-Wstringop-overflow=4 \
+		-Wsuggest-attribute=cold \
+		-Wsuggest-attribute=const \
+		-Wsuggest-attribute=format \
+		-Wsuggest-attribute=malloc \
+		-Wsuggest-attribute=noreturn \
+		-Wsuggest-attribute=pure \
+		-Wsuggest-final-methods \
+		-Wsuggest-final-types \
+		-Wswitch-enum \
+		-Wsync-nand \
+		-Wtrampolines \
+		-Wunsafe-loop-optimizations \
+		-Wuseless-cast \
+		-Wvector-operation-performance \
+		-Wvirtual-inheritance
+endif
 # Omitted because they were being triggered:
 # -Wsystem-headers
 # -Wabi-tag
