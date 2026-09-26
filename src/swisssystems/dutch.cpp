@@ -1483,6 +1483,19 @@ namespace swisssystems
                 vertexIndices[opponentIndex],
                 baseEdgeWeights[opponentIndex][*playerIterator]);
             }
+
+            // Nor may the player float below the next score group.
+            for (
+              tournament::player_index opponentVertex =
+                vertexIndices.back() + 1u;
+              opponentVertex < sortedPlayers.size();
+              ++opponentVertex)
+            {
+              matchingComputer.setEdgeWeight(
+                playerVertex,
+                opponentVertex,
+                maxEdgeWeight & 0u);
+            }
           }
           if (!alreadyExchanged)
           {
