@@ -176,7 +176,7 @@ namespace fileformats
             throw tournament::BuildLimitExceededException(
               "This build only supports ratings up to "
                 + utility::uintstringconversion
-                    ::toString(~tournament::rating{ })
+                    ::toString(std::numeric_limits<tournament::rating>::max())
                 + '.');
           }
         }

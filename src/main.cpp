@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <list>
 #include <memory>
 #include <new>
@@ -625,7 +626,7 @@ int main(const int argc, char**const argv)
           {
             std::cerr << "The seed must be between 0 and "
               << utility::uintstringconversion
-                   ::toString(~decltype(seedValue){ })
+                   ::toString(std::numeric_limits<decltype(seedValue)>::max())
               << '.'
               << std::endl;
             return LIMIT_EXCEEDED;
