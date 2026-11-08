@@ -717,22 +717,27 @@ namespace swisssystems
       std::unordered_map<tournament::round_index, tournament::player_index>
         unplayedGameRanks{ };
 
-      // Compute an edge weight upper bound.
+      // Compute an edge weight upper bound. If no player is available to be
+      // paired, there are no edges, and sortedPlayers.front() must not be
+      // dereferenced.
       matching_computer::edge_weight maxEdgeWeight{ 0u };
-      computeEdgeWeight<true>(
-        *sortedPlayers.front(),
-        *sortedPlayers.front(),
-        true,
-        false,
-        0u,
-        tournament,
-        forbiddenPairs,
-        scoreGroupSizeBits,
-        scoreGroupsShift,
-        scoreGroupShifts,
-        false,
-        unplayedGameRanks,
-        maxEdgeWeight);
+      if (!sortedPlayers.empty())
+      {
+        computeEdgeWeight<true>(
+          *sortedPlayers.front(),
+          *sortedPlayers.front(),
+          true,
+          false,
+          0u,
+          tournament,
+          forbiddenPairs,
+          scoreGroupSizeBits,
+          scoreGroupsShift,
+          scoreGroupShifts,
+          false,
+          unplayedGameRanks,
+          maxEdgeWeight);
+      }
 
       // Initialize the matching computer used to optimize the pairings
       matching_computer matchingComputer(sortedPlayers.size(), maxEdgeWeight);

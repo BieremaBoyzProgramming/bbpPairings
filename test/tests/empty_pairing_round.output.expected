@@ -1,0 +1,25 @@
+empty_pairing_round: Round #1
+  Checker pairings        Tournament pairings 
+      1 -   6                  1 -  10
+      7 -   2                  9 -   2
+      9 -   4                  7 -   4
+      5 -  10                  5 -   6
+
+empty_pairing_round: Round #2
+  Checker pairings        Tournament pairings 
+      8 -   5                  5 -   4
+      4 -   1                 10 -   8
+      2 -   7                  9 -   1
+     10 -   9                  7 -   2
+      6 -   3                  3 -   6
+
+empty_pairing_round: Round #3
+  Checker pairings        Tournament pairings 
+     10 -   5                  5 -   2
+      4 -   9                 10 -   6
+      8 -   7                  1 -   8
+      6 -   1                  7 -   9
+      2 -   3                  3 -   4
+
+empty_pairing_round: Round #4
+
