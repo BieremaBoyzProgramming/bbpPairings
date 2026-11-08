@@ -15,6 +15,7 @@
 
 #include <tournament/tournament.h>
 #include <utility/tokenizer.h>
+#include <utility/typesizes.h>
 #include <utility/uintstringconversion.h>
 
 #include "trf.h"
@@ -471,7 +472,9 @@ namespace fileformats
             std::fill(
               &player.accelerations[roundStart],
               &player.accelerations[
-                std::min(roundEnd + 1u, player.accelerations.size())],
+                utility::typesizes::minUint(
+                  roundEnd + 1u,
+                  player.accelerations.size())],
               gamePoints);
           }
           if (player.accelerations.size() <= roundEnd)
@@ -952,7 +955,10 @@ namespace fileformats
         const tournament::Player &player,
         const tournament::player_index rank)
       {
-        if (player.scoreWithoutAcceleration > 999u)
+        if (
+          utility::typesizes::exceedsUint(
+            player.scoreWithoutAcceleration,
+            999u))
         {
           throw LimitExceededException(
             "The output file format does not support scores above 99.9.");
@@ -1246,7 +1252,10 @@ namespace fileformats
                   throw InvalidLineException();
                 }
 
+                // Type codes of a pairing system omitted from the build are
+                // reported as unsupported.
                 const auto tournamentType = line.substr(4);
+#ifndef OMIT_DUTCH
                 if (
                   tournamentType == U"FIDE_DUTCH_2025"
                     || tournamentType == U"FIDE_DUTCH_2026"
@@ -1263,7 +1272,10 @@ namespace fileformats
                   result.swissSystem = swisssystems::DUTCH;
                   isBakuAccelerationSpecified = true;
                 }
-                else if (tournamentType == U"FIDE_BURSTEIN")
+                else
+#endif
+#ifndef OMIT_BURSTEIN
+                if (tournamentType == U"FIDE_BURSTEIN")
                 {
                   result.swissSystem = swisssystems::BURSTEIN;
                   isBakuAccelerationSpecified = false;
@@ -1274,6 +1286,7 @@ namespace fileformats
                   isBakuAccelerationSpecified = true;
                 }
                 else
+#endif
                 {
                   throw InvalidLineException("unsupported tournament type");
                 }
@@ -1385,12 +1398,12 @@ namespace fileformats
       }
       for (const tournament::Player &player : tournament.players)
       {
-        if (player.id > 9999u)
+        if (utility::typesizes::exceedsUint(player.id, 9999u))
         {
           throw LimitExceededException(
             "The output file format only supports player IDs up to 9999.");
         }
-        else if (player.rating > 9999u)
+        else if (utility::typesizes::exceedsUint(player.rating, 9999u))
         {
           throw LimitExceededException(
             "The output file format only supports ratings up to 9999.");
@@ -1420,12 +1433,16 @@ namespace fileformats
       outputStream << "092 ";
       switch (tournament.swissSystem)
       {
+#ifndef OMIT_DUTCH
       case swisssystems::DUTCH:
         outputStream << "FIDE_DUTCH_2025";
         break;
+#endif
+#ifndef OMIT_BURSTEIN
       case swisssystems::BURSTEIN:
         outputStream << "FIDE_BURSTEIN";
         break;
+#endif
       default:
         throw LimitExceededException("Unexpected Swiss system.");
       }
@@ -1440,12 +1457,18 @@ namespace fileformats
           || tournament.pointsForPairingAllocatedBye != 10u)
       {
         if (
-          tournament.pointsForWin > 999u
-            || tournament.pointsForDraw > 999u
-            || tournament.pointsForLoss > 999u
-            || tournament.pointsForZeroPointBye > 999u
-            || tournament.pointsForForfeitLoss > 999u
-            || tournament.pointsForPairingAllocatedBye > 999u)
+          utility::typesizes::exceedsUint(tournament.pointsForWin, 999u)
+            || utility::typesizes::exceedsUint(tournament.pointsForDraw, 999u)
+            || utility::typesizes::exceedsUint(tournament.pointsForLoss, 999u)
+            || utility::typesizes::exceedsUint(
+                 tournament.pointsForZeroPointBye,
+                 999u)
+            || utility::typesizes::exceedsUint(
+                 tournament.pointsForForfeitLoss,
+                 999u)
+            || utility::typesizes::exceedsUint(
+                 tournament.pointsForPairingAllocatedBye,
+                 999u))
         {
           throw LimitExceededException(
             "The output file format does not support scores above 99.9.");
