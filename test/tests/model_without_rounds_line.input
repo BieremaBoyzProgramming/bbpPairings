@@ -1,0 +1,8 @@
+012 Model without rounds line test
+XXC white1
+001    1      Player 0001                       2360                             1.5          6 w =     5 b 0     4 w 1
+001    2      Player 0002                       2320                             0.5          5 b 0     3 b 0     6 b =
+001    3      Player 0003                       2280                             2.0          4 w 0     2 w 1     5 w 1
+001    4      Player 0004                       2240                             2.0          3 b 1     6 b 1     1 b 0
+001    5      Player 0005                       2200                             2.0          2 w 1     1 w 1     3 b 0
+001    6      Player 0006                       2160                             1.0          1 b =     4 w 0     2 w =

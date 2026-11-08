@@ -97,6 +97,19 @@ namespace utility
     }
 
     /**
+     * Return whether the unsigned integer t is greater than u.
+     *
+     * Unlike a plain comparison, this does not trigger -Wtype-limits when T is
+     * too narrow to ever exceed u, as happens in builds with reduced
+     * compile-time limits (MAX_PLAYERS, MAX_POINTS, ...).
+     */
+    template <typename T, typename U>
+    constexpr bool exceedsUint(const T t, const U u)
+    {
+      return make_unsigned_if_signed<T>(t) > make_unsigned_if_signed<U>(u);
+    }
+
+    /**
      * Return the base-radix exponent to the given integer power. If inverse is
      * true, the exponent is first negated.
      *

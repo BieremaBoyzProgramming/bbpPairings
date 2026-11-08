@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <list>
 #include <memory>
 #include <new>
@@ -36,28 +37,14 @@ namespace
    */
   void printProgramInfo(std::ostream &ostream, bool checkComponents = true)
   {
-#ifdef OMIT_BURSTEIN
-#define CUSTOM_BUILD
-#endif
-#ifdef OMIT_DUTCH
-#define CUSTOM_BUILD
-#endif
-#ifdef OMIT_GENERATOR
-#define CUSTOM_BUILD
-#endif
-#ifdef OMIT_CHECKER
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_PLAYERS
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_POINTS
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_RATING
-#define CUSTOM_BUILD
-#endif
-#ifdef MAX_ROUNDS
+#if defined(OMIT_BURSTEIN) \
+  || defined(OMIT_DUTCH) \
+  || defined(OMIT_GENERATOR) \
+  || defined(OMIT_CHECKER) \
+  || defined(MAX_PLAYERS) \
+  || defined(MAX_POINTS) \
+  || defined(MAX_RATING) \
+  || defined(MAX_ROUNDS)
 #define CUSTOM_BUILD
 #endif
     ostream
@@ -639,7 +626,7 @@ int main(const int argc, char**const argv)
           {
             std::cerr << "The seed must be between 0 and "
               << utility::uintstringconversion
-                   ::toString(~decltype(seedValue){ })
+                   ::toString(std::numeric_limits<decltype(seedValue)>::max())
               << '.'
               << std::endl;
             return LIMIT_EXCEEDED;
