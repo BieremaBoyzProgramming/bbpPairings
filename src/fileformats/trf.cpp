@@ -1068,8 +1068,17 @@ namespace fileformats
           {
             end = buffer.size();
           }
-          std::u32string line =
-            convert.from_bytes(&buffer[start], &buffer[end]);
+          // Without error strings, std::wstring_convert reports invalid input
+          // by throwing std::range_error.
+          std::u32string line;
+          try
+          {
+            line = convert.from_bytes(&buffer[start], &buffer[end]);
+          }
+          catch (const std::range_error &)
+          {
+            throw FileFormatException("The file is not legal UTF-8.");
+          }
           if (convert.converted() < end - start)
           {
             throw FileFormatException("The file is not legal UTF-8.");
