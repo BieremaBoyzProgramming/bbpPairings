@@ -503,7 +503,7 @@ namespace fileformats
           startIndex += 5)
         {
           const tournament::points points =
-            line.substr(startIndex, startIndex + 4) == U"    "
+            line.substr(startIndex, 4) == U"    "
               ? 0
               : readScore(
                   std::u32string(&line[startIndex], &line[startIndex + 4u]));
