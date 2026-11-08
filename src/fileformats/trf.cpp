@@ -1527,7 +1527,7 @@ namespace fileformats
         );
       }
 
-      bool roundsLine;
+      bool roundsLine{ };
       for (const std::u32string &line : modelFileData.lines)
       {
         if (line.length() < 3)
