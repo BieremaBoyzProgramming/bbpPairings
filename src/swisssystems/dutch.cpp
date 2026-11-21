@@ -632,6 +632,14 @@ namespace swisssystems
           }
         }
 
+        for (
+          tournament::player_index playerIndex = 0;
+          playerIndex < scoreGroupBegin;
+          ++playerIndex)
+        {
+          result[playerIndex].resize(playerIndex);
+        }
+
         return result;
       }
     }
