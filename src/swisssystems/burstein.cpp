@@ -797,9 +797,7 @@ namespace swisssystems
         }
         result.emplace_back((*playerIterator)->id, (*playerIterator)->id);
         bye = *playerIterator;
-        byeIterator = playerIterator;
-        ++byeIterator;
-        sortedPlayers.erase(playerIterator);
+        byeIterator = sortedPlayers.erase(playerIterator);
       }
       /**
        * The vector of players to be paired (not including the player receiving
@@ -812,7 +810,6 @@ namespace swisssystems
       if (bye)
       {
         sortedPlayers.insert(byeIterator, bye);
-        --byeIterator;
       }
 
       matching_computer matchingComputer(vertexLabels.size(), maxEdgeWeight);
