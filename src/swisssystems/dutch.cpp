@@ -117,7 +117,8 @@ namespace swisssystems
         if (!match.gameWasPlayed)
         {
           return
-            tournament.getPoints(player, match) > tournament.pointsForLoss
+            (match.participatedInPairing && match.opponent == player.id)
+                || tournament.getPoints(player, match) > tournament.pointsForLoss
               ? FLOAT_DOWN
               : FLOAT_NONE;
         }
