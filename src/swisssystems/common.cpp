@@ -17,6 +17,7 @@
 
 #include "burstein.h"
 #include "common.h"
+#include "dubov.h"
 #include "dutch.h"
 
 namespace swisssystems
@@ -396,6 +397,9 @@ namespace swisssystems
 #ifndef OMIT_BURSTEIN
   constexpr burstein::BursteinInfo bursteinInfo{ };
 #endif
+#ifndef OMIT_DUBOV
+  constexpr dubov::DubovInfo dubovInfo{ };
+#endif
 
   /**
    * Retrieve the Info object for the specified SwissSystem.
@@ -411,6 +415,10 @@ namespace swisssystems
 #ifndef OMIT_BURSTEIN
     case BURSTEIN:
       return bursteinInfo;
+#endif
+#ifndef OMIT_DUBOV
+    case DUBOV:
+      return dubovInfo;
 #endif
     default:
       throw std::logic_error("");

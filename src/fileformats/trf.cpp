@@ -1264,6 +1264,22 @@ namespace fileformats
                   result.swissSystem = swisssystems::BURSTEIN;
                   isBakuAccelerationSpecified = true;
                 }
+#ifndef OMIT_DUBOV
+                else if (
+                  tournamentType == U"FIDE_DUBOV"
+                    || tournamentType == U"FIDE_DUBOV_2026")
+                {
+                  result.swissSystem = swisssystems::DUBOV;
+                  isBakuAccelerationSpecified = false;
+                }
+                else if (
+                  tournamentType == U"FIDE_DUBOV_BAKU"
+                    || tournamentType == U"FIDE_DUBOV_2026_BAKU")
+                {
+                  result.swissSystem = swisssystems::DUBOV;
+                  isBakuAccelerationSpecified = true;
+                }
+#endif
                 else
                 {
                   throw InvalidLineException("unsupported tournament type");
@@ -1417,6 +1433,11 @@ namespace fileformats
       case swisssystems::BURSTEIN:
         outputStream << "FIDE_BURSTEIN";
         break;
+#ifndef OMIT_DUBOV
+      case swisssystems::DUBOV:
+        outputStream << "FIDE_DUBOV";
+        break;
+#endif
       default:
         throw LimitExceededException("Unexpected Swiss system.");
       }

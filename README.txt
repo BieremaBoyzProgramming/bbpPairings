@@ -15,7 +15,11 @@ not a full tournament manager, just an engine for computing the pairings.
 The program currently implements the 2025 rules for the Dutch system (the
 effective date for the rules was delayed to 2026). It also includes a flawed
 implementation of a previous version of the Burstein system. The implementation
-of the Burstein system has not been endorsed by FIDE.
+of the Burstein system has not been endorsed by FIDE. Finally, it implements the
+Dubov system as specified in C.04.4.1 of the FIDE handbook (rules applied from
+1 February 2026). The implementation of the Dubov system has not been endorsed
+by FIDE either; see the section "Dubov system" below for the interpretations it
+makes.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
@@ -156,6 +160,11 @@ for the pairing-allocated bye (Y if yes, N if no). The C14 and C16 columns
 indicate the floating direction of the player on the previous and
 next-to-previous rounds, respectively (U for upfloat, D for downfloat).
 
+For the Dubov system, the column C2 has the same meaning, ARO is the average
+rating of the opponents (Article 1.7), Up is the number of times the player has
+been upfloated (followed by * for a maximum upfloater, Article 1.8), and UpP
+indicates whether the player upfloated in the previous round.
+
 BBP Pairings has the additional option to generate checklist files while
 generating or checking tournaments, not just when pairing individual rounds. In
 this case, the tables for all of the rounds are put into the same file, with
@@ -171,9 +180,9 @@ which Swiss system to use for pairing is required.
 
 The acceptable syntax forms for running BBP Pairings are:
 bbpPairings.exe [-r]
-bbpPairings.exe [-r] (--burstein | --dutch) input-file -c [-l [check-list-file]]
-bbpPairings.exe [-r] (--burstein | --dutch) input-file -p [output-file] [-l [check-list-file]]
-bbpPairings.exe [-r] (--burstein | --dutch) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dubov | --dutch) input-file -c [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dubov | --dutch) input-file -p [output-file] [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dubov | --dutch) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l [check-list-file]]
 
 If bbpPairings.exe is not in the search path, the path to the executable should
 be substituted for bbpPairings.exe. For example, on Unix-based systems, if
@@ -205,6 +214,35 @@ situations:
    file might not exist or might not be readable. (This error code is not
    triggered for checklist files.)
 
+Dubov system
+------------
+The engine for the Dubov system (--dubov) follows C.04.4.1 of the FIDE handbook,
+approved by the Council on 28/10/2025 and applied from 1 February 2026. In a
+TRF, the tournament type codes FIDE_DUBOV and FIDE_DUBOV_2026 (and their _BAKU
+variants) select it.
+
+Each step of the rules is solved with the weighted matching algorithm: the
+pairing-allocated bye (Article 3.1), the choice of the upfloaters (Articles
+3.2.1 and 3.2.2, criteria C1 to C10), the G1/G2 re-composition (Article 3.2.4)
+and the choice of the transposition T2 (Article 3.2.6). When the rules ask for
+"the first set" in some order, the candidates are examined in that order and the
+choice is frozen as soon as it is compatible with an optimal pairing.
+
+The rules leave a few points open; the engine makes the following choices:
+- Only played games count as upfloats (Article 1.8) and for ARO (as Article 1.7
+  states). A forfeit is not an upfloat, as for the floats of the Dutch engine.
+- C9 (Article 2.3.5) minimises the total number of previous upfloats of the
+  maximum upfloaters chosen.
+- The "last round" for C8 to C10 is determined from the number of rounds (XXR).
+- If the colour difference and the last two colours give opposite absolute
+  preferences, the colour difference prevails.
+- As in the other engines, TPNs are the effective pairing numbers: players who
+  have not yet taken part in any pairing (late entries) are not numbered. This
+  matters, for instance, for the colours of round 1 (Article 5.2.1) when a
+  player is absent from it.
+- Players without a rating are treated as rated 0 (Article 1.1 requires the
+  Chief Arbiter to assign one).
+
 Time complexity
 ---------------
 Let n denote the largest player ID in a given tournament and r the number of
@@ -212,6 +250,9 @@ rounds already played. For simplicity, assume r is O(n).
 
 This program is believed to achieve a theoretical runtime that is O(n^3) for
 pairing a single round using the Burstein system.
+
+For the Dubov system, pairing a round is believed to take time O(n^3 * s),
+where s is the number of occupied score groups.
 
 For the Dutch system, pairing a round is believed to take time
 O(n^3 * s^2 * log n), where s is the number of occupied score groups

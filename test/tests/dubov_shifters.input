@@ -1,0 +1,10 @@
+012 Dubov shifters test
+001    1      Test0001 Player0001               2400                             0.0    1     5 w 0
+001    2      Test0002 Player0002               2300                             1.0    2     6 b 1
+001    3      Test0003 Player0003               2200                             0.0    3     7 w 0
+001    4      Test0004 Player0004               2100                             1.0    4     8 b 1
+001    5      Test0005 Player0005               2000                             1.0    5     1 b 1
+001    6      Test0006 Player0006               1900                             0.0    6     2 w 0
+001    7      Test0007 Player0007               1800                             1.0    7     3 b 1
+001    8      Test0008 Player0008               1700                             0.0    8     4 w 0
+XXR 5
