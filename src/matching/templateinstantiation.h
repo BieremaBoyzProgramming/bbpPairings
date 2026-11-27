@@ -2,6 +2,7 @@
 #define MATCHINGTEMPLATEINSTANTIATION_H
 
 #include <swisssystems/burstein.h>
+#include <swisssystems/dubov.h>
 #include <swisssystems/dutch.h>
 
 #ifdef OMIT_BURSTEIN
@@ -18,10 +19,20 @@ a(swisssystems::burstein::matching_computer::edge_weight)
 a(swisssystems::dutch::matching_computer::edge_weight)
 #endif
 
+// The Dubov system uses the same edge weight type as the Dutch system, so it
+// only needs its own instantiation when the Dutch system is omitted.
+#if defined(OMIT_DUBOV) || !defined(OMIT_DUTCH)
+#define MATCHING_EDGE_WEIGHTS_DUBOV(a)
+#else
+#define MATCHING_EDGE_WEIGHTS_DUBOV(a) \
+a(swisssystems::dubov::matching_computer::edge_weight)
+#endif
+
 // This macro is called in the cpp files of the matching code to instantiate the
 // templates needed for the Swiss systems.
 
 #define INSTANTIATE_MATCHING_EDGE_WEIGHT_TEMPLATES(a) \
-MATCHING_EDGE_WEIGHT_BURSTEIN(a) MATCHING_EDGE_WEIGHTS_DUTCH(a)
+MATCHING_EDGE_WEIGHT_BURSTEIN(a) MATCHING_EDGE_WEIGHTS_DUTCH(a) \
+MATCHING_EDGE_WEIGHTS_DUBOV(a)
 
 #endif

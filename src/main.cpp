@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -37,6 +39,9 @@ namespace
   void printProgramInfo(std::ostream &ostream, bool checkComponents = true)
   {
 #ifdef OMIT_BURSTEIN
+#define CUSTOM_BUILD
+#endif
+#ifdef OMIT_DUBOV
 #define CUSTOM_BUILD
 #endif
 #ifdef OMIT_DUTCH
@@ -169,6 +174,9 @@ int main(const int argc, char**const argv)
 #ifndef OMIT_BURSTEIN
         : swissSystemString == "--burstein" ? swisssystems::BURSTEIN
 #endif
+#ifndef OMIT_DUBOV
+        : swissSystemString == "--dubov" ? swisssystems::DUBOV
+#endif
         : swisssystems::NONE;
     int processedArgCount = 2 + printInfo;
 
@@ -276,23 +284,24 @@ int main(const int argc, char**const argv)
       // Invalid command.
 
       printProgramInfo(std::cerr);
-      const char*const swissSystemSyntax =
+      const std::string swissSystemList =
+        ""
 #ifndef OMIT_DUTCH
-#ifndef OMIT_BURSTEIN
-        "("
-#endif
-        "--dutch"
+        " | --dutch"
 #endif
 #ifndef OMIT_BURSTEIN
-#ifndef OMIT_DUTCH
-        " | "
+        " | --burstein"
 #endif
-        "--burstein"
-#ifndef OMIT_DUTCH
-        ")"
-#endif
+#ifndef OMIT_DUBOV
+        " | --dubov"
 #endif
         ;
+      // Drop the leading separator.
+      const std::string swissSystemSyntax =
+        '('
+          + swissSystemList.substr(
+              std::min<std::size_t>(3u, swissSystemList.size()))
+          + ')';
       const char*const checklistString = "[-l [check-list-file]]";
       std::cerr << std::endl
         << std::endl
