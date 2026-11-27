@@ -1280,6 +1280,22 @@ namespace fileformats
                   isBakuAccelerationSpecified = true;
                 }
 #endif
+#ifndef OMIT_LIM
+                else if (
+                  tournamentType == U"FIDE_LIM"
+                    || tournamentType == U"FIDE_LIM_2026")
+                {
+                  result.swissSystem = swisssystems::LIM;
+                  isBakuAccelerationSpecified = false;
+                }
+                else if (
+                  tournamentType == U"FIDE_LIM_BAKU"
+                    || tournamentType == U"FIDE_LIM_2026_BAKU")
+                {
+                  result.swissSystem = swisssystems::LIM;
+                  isBakuAccelerationSpecified = true;
+                }
+#endif
                 else
                 {
                   throw InvalidLineException("unsupported tournament type");
@@ -1436,6 +1452,11 @@ namespace fileformats
 #ifndef OMIT_DUBOV
       case swisssystems::DUBOV:
         outputStream << "FIDE_DUBOV";
+        break;
+#endif
+#ifndef OMIT_LIM
+      case swisssystems::LIM:
+        outputStream << "FIDE_LIM";
         break;
 #endif
       default:

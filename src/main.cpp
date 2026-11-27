@@ -44,6 +44,9 @@ namespace
 #ifdef OMIT_DUBOV
 #define CUSTOM_BUILD
 #endif
+#ifdef OMIT_LIM
+#define CUSTOM_BUILD
+#endif
 #ifdef OMIT_DUTCH
 #define CUSTOM_BUILD
 #endif
@@ -177,6 +180,9 @@ int main(const int argc, char**const argv)
 #ifndef OMIT_DUBOV
         : swissSystemString == "--dubov" ? swisssystems::DUBOV
 #endif
+#ifndef OMIT_LIM
+        : swissSystemString == "--lim" ? swisssystems::LIM
+#endif
         : swisssystems::NONE;
     int processedArgCount = 2 + printInfo;
 
@@ -294,6 +300,9 @@ int main(const int argc, char**const argv)
 #endif
 #ifndef OMIT_DUBOV
         " | --dubov"
+#endif
+#ifndef OMIT_LIM
+        " | --lim"
 #endif
         ;
       // Drop the leading separator.

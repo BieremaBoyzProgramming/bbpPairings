@@ -16,10 +16,10 @@ The program currently implements the 2025 rules for the Dutch system (the
 effective date for the rules was delayed to 2026). It also includes a flawed
 implementation of a previous version of the Burstein system. The implementation
 of the Burstein system has not been endorsed by FIDE. Finally, it implements the
-Dubov system as specified in C.04.4.1 of the FIDE handbook (rules applied from
-1 February 2026). The implementation of the Dubov system has not been endorsed
-by FIDE either; see the section "Dubov system" below for the interpretations it
-makes.
+Dubov system as specified in C.04.4.1 of the FIDE handbook and the Lim system
+as specified in C.04.4.3 (both with the rules applied from 1 February 2026).
+These implementations have not been endorsed by FIDE either; see the sections
+"Dubov system" and "Lim system" below for the interpretations they make.
 
 The program's interface is designed to be very similar to that described in the
 advanced user manual for JaVaFo 1.4 (with permission to do so from the author,
@@ -165,6 +165,11 @@ rating of the opponents (Article 1.7), Up is the number of times the player has
 been upfloated (followed by * for a maximum upfloater, Article 1.8), and UpP
 indicates whether the player upfloated in the previous round.
 
+For the Lim system, the column C2 has the same meaning, Due is the colour the
+player is due (Articles 5.1, 5.5 and 5.6), Must the colour the player must
+receive (Articles 5.1.2 and 5.3), and FlP indicates whether the player floated
+in the previous round (Article 3.10).
+
 BBP Pairings has the additional option to generate checklist files while
 generating or checking tournaments, not just when pairing individual rounds. In
 this case, the tables for all of the rounds are put into the same file, with
@@ -180,9 +185,9 @@ which Swiss system to use for pairing is required.
 
 The acceptable syntax forms for running BBP Pairings are:
 bbpPairings.exe [-r]
-bbpPairings.exe [-r] (--burstein | --dubov | --dutch) input-file -c [-l [check-list-file]]
-bbpPairings.exe [-r] (--burstein | --dubov | --dutch) input-file -p [output-file] [-l [check-list-file]]
-bbpPairings.exe [-r] (--burstein | --dubov | --dutch) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dubov | --dutch | --lim) input-file -c [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dubov | --dutch | --lim) input-file -p [output-file] [-l [check-list-file]]
+bbpPairings.exe [-r] (--burstein | --dubov | --dutch | --lim) (model-file -g | -g [config-file]) -o trf_file [-s random_seed] [-l [check-list-file]]
 
 If bbpPairings.exe is not in the search path, the path to the executable should
 be substituted for bbpPairings.exe. For example, on Unix-based systems, if
@@ -243,6 +248,65 @@ The rules leave a few points open; the engine makes the following choices:
 - Players without a rating are treated as rated 0 (Article 1.1 requires the
   Chief Arbiter to assign one).
 
+Lim system
+----------
+The engine for the Lim system (--lim) follows C.04.4.3 of the FIDE handbook,
+approved by the Council on 28/10/2025 and applied from 1 February 2026. In a
+TRF, the tournament type codes FIDE_LIM and FIDE_LIM_2026 (and their _BAKU
+variants) select it.
+
+The Lim rules are a procedure, and the engine follows it: the pairing-allocated
+bye first (Article 1.1), then the score groups from the highest one down to just
+before the Median Scoregroup, from the lowest one up, and the Median Scoregroup
+last (Article 2.2); in each score group, the floaters coming from another group
+first (Articles 3.6 to 3.8), the transfers of Article 2.3, then the proposed
+pairings of Article 2.4 scrutinised with the exchanges of Article 4; a blocked
+Median Scoregroup is extended by cracking pairings of its neighbours (Article
+2.6). The weighted matching algorithm answers the questions the procedure asks:
+every choice keeps the largest possible number of pairs in the score group, and
+among those choices, the first one in the order given by the rules.
+
+The rules leave a few points open; the engine makes the following choices:
+- The "highest numbered player" is player #1 of the score group (as in Article
+  4.2), that is, the smallest pairing number; the "lowest numbered player" is
+  the last one.
+- Compatibility (Article 2.1) requires that the players did not meet and that a
+  colour allocation gives neither of them the same colour three times in a row
+  nor three more games with one colour than with the other. In the last round,
+  players with the same score are compatible regardless of colours (Article 6).
+  If no complete pairing satisfies Article 2.1, only the rule that players do
+  not meet twice is kept.
+- Only played games count for colours, previous meetings and floats. A player
+  floated in the previous round when they played an opponent with a different
+  score.
+- The bye goes to the lowest ranked eligible player of the lowest score group
+  whose removal leaves a complete pairing possible.
+- The floater making a score group even (Article 2.3.4) is chosen by, in
+  order: the most pairs left in the group (3.10.2), a compatible opponent in the
+  adjacent score group (3.9), not having floated in the previous round (3.10),
+  equalising the due colours (3.2.2), then the lowest numbered player when
+  pairing downward and the highest numbered one when pairing upward (3.2.4,
+  3.3). The exclusion of the opponents of other floaters (3.3, 3.4) is not
+  modelled.
+- A floater is paired with the first player, in the order of Article 3.8, who is
+  due the alternate colour, among those keeping the most pairs in the group; if
+  no player is due the alternate colour, the first compatible player in that
+  order. Outside the Median Scoregroup, a floater without a compatible opponent
+  goes on to the next score group (3.5); in the Median Scoregroup, it stays and
+  is paired with the others.
+- The second scrutiny of Article 5.2 is made together with the first one: in
+  scrutiny order, each player receives the first opponent, in the order of
+  exchanges of Articles 4.2 and 4.3, who grants both players their due colours,
+  if such an opponent keeps the most pairs in the group, and otherwise the
+  first opponent that does.
+- When the Median Scoregroup is blocked (Article 2.6), the last pairing made in
+  the nearest paired score group on the chosen side is cracked.
+- If both players are due the same colour and their colour histories are
+  identical (Article 5.4), "in the median scoregroup or above" refers to the
+  score group in which the pair was made.
+- The Maxi-tournament restrictions (Articles 3.2.3, 3.8 and 5.7) are not
+  applied.
+
 Time complexity
 ---------------
 Let n denote the largest player ID in a given tournament and r the number of
@@ -253,6 +317,10 @@ pairing a single round using the Burstein system.
 
 For the Dubov system, pairing a round is believed to take time O(n^3 * s),
 where s is the number of occupied score groups.
+
+For the Lim system, pairing a round is believed to take time O(n^5) in the
+worst case (a matching for each player of each score group), and much less in
+practice.
 
 For the Dutch system, pairing a round is believed to take time
 O(n^3 * s^2 * log n), where s is the number of occupied score groups

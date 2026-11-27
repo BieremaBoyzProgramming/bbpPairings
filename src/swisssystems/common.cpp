@@ -19,6 +19,7 @@
 #include "common.h"
 #include "dubov.h"
 #include "dutch.h"
+#include "lim.h"
 
 namespace swisssystems
 {
@@ -400,6 +401,9 @@ namespace swisssystems
 #ifndef OMIT_DUBOV
   constexpr dubov::DubovInfo dubovInfo{ };
 #endif
+#ifndef OMIT_LIM
+  constexpr lim::LimInfo limInfo{ };
+#endif
 
   /**
    * Retrieve the Info object for the specified SwissSystem.
@@ -419,6 +423,10 @@ namespace swisssystems
 #ifndef OMIT_DUBOV
     case DUBOV:
       return dubovInfo;
+#endif
+#ifndef OMIT_LIM
+    case LIM:
+      return limInfo;
 #endif
     default:
       throw std::logic_error("");

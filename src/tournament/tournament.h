@@ -45,6 +45,9 @@ namespace swisssystems
 #ifndef OMIT_DUBOV
     DUBOV,
 #endif
+#ifndef OMIT_LIM
+    LIM,
+#endif
     NONE
   };
 }

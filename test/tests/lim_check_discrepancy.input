@@ -1,0 +1,14 @@
+012 Lim check discrepancy test
+001    1      Test0001 Player0001               2230                             5.0    1     6 w 1     4 b 1     2 w 1     3 b 0     5 w 1     7 b 1
+001    2      Test0002 Player0002               2148                             3.5    3     7 b 1    11 w 1     1 b 0     5 b =     6 w =     3 w =
+001    3      Test0003 Player0003               2097                             4.5    2     8 w =    10 b 1     5 w 1     1 w 1     4 b =     2 b =
+001    4      Test0004 Player0004               1924                             3.5    4     9 b 1     1 w 0    11 b 1     7 w 1     3 w =    10 b 0
+001    5      Test0005 Player0005               1856                             3.0    6    10 w =     8 b 1     3 b 0     2 w =     1 b 0  0000 - U
+001    6      Test0006 Player0006               1850                             3.5    5     1 b 0     7 w 0  0000 - U    10 b 1     2 b =     9 w 1
+001    7      Test0007 Player0007               1805                             3.0    7     2 w 0     6 b 1     9 w 1     4 b 0    11 w 1     1 w 0
+001    8      Test0008 Player0008               1727                             2.0   11     3 b =     5 w 0    10 w 0  0000 - U     9 b 0    11 b =
+001    9      Test0009 Player0009               1682                             2.0    8     4 w 0  0000 - U     7 b 0    11 w 0     8 w 1     6 b 0
+001   10      Test0010 Player0010               1560                             3.5    9     5 b =     3 w 0     8 b 1     6 w 0  0000 - U     4 w 1
+001   11      Test0011 Player0011               1541                             2.5   10  0000 - U     2 b 0     4 w 0     9 b 1     7 b 0     8 w =
+
+092 FIDE_LIM
