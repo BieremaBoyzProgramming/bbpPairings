@@ -237,7 +237,9 @@ The rules leave a few points open; the engine makes the following choices:
 - If the colour difference and the last two colours give opposite absolute
   preferences, the colour difference prevails.
 - As in the other engines, TPNs are the effective pairing numbers: players who
-  have not yet taken part in any pairing (late entries) are not numbered.
+  have not yet taken part in any pairing (late entries) are not numbered. This
+  matters, for instance, for the colours of round 1 (Article 5.2.1) when a
+  player is absent from it.
 - Players without a rating are treated as rated 0 (Article 1.1 requires the
   Chief Arbiter to assign one).
 

@@ -776,7 +776,7 @@ namespace swisssystems
           assert(transpositionMatcher.isPerfect());
           for (vertex_index vertex{ }; vertex < size; ++vertex)
           {
-            if (vertex != partner)
+            if (vertex != partner && vertex != s1Vertex)
             {
               transpositionMatcher.forbid(s1Vertex, vertex);
               transpositionMatcher.forbid(partner, vertex);
