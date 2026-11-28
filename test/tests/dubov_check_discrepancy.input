@@ -1,0 +1,17 @@
+012 Dubov checker discrepancy test
+001    1      Test0001 Player0001               2416                             6.0    1     8 b 1    12 w 1     2 b +     3 b 1     7 w 1    11 w 1
+001    2      Test0002 Player0002               2176                             4.0    2     9 w 1     7 b 1     1 w -     5 b 1     3 w 0     4 b 1
+001    3      Test0003 Player0003               2078                             4.0    3    10 b 1     4 w 1    13 b 1     1 w 0     2 b 1     5 w 0
+001    4      Test0004 Player0004               2017                             3.5    5    11 w 1     3 b 0     5 w =    14 b 1     6 w 1     2 w 0
+001    5      Test0005 Player0005               1808                             4.0    4    12 b =     6 w 1     4 b =     2 w 0     8 b 1     3 b 1
+001    6      Test0006 Player0006               1759                             2.0   13    13 w 0     5 b 0  0000 - U     9 w 1     4 b 0    12 w 0
+001    7      Test0007 Player0007               1727                             3.0    8    14 b 1     2 w 0    15 b 1    13 w 1     1 b 0     9 w 0
+001    8      Test0008 Player0008               1725                             3.0    9     1 w 0    11 b =    10 w =    12 b 1     5 w 0  0000 - U
+001    9      Test0009 Player0009               1720                             3.5    6     2 b 0    10 w +    14 w =     6 b 0    15 w 1     7 b 1
+001   10      Test0010 Player0010               1666                             3.0   10     3 w 0     9 b -     8 b =  0000 - U    14 w =    15 b 1
+001   11      Test0011 Player0011               1573                             2.5   12     4 b 0     8 w =    12 b =    15 w 1    13 b =     1 b 0
+001   12      Test0012 Player0012               1518                             3.0   11     5 w =     1 b 0    11 w =     8 w 0  0000 - U     6 b 1
+001   13      Test0013 Player0013               1514                             3.5    7     6 b 1    15 w 1     3 w 0     7 b 0    11 w =    14 b 1
+001   14      Test0014 Player0014               1372                             2.0   14     7 w 0  0000 - U     9 b =     4 w 0    10 b =    13 w 0
+001   15      Test0015 Player0015               1349                             1.0   15  0000 - U    13 b 0     7 w 0    11 b 0     9 b 0    10 w 0
+092 FIDE_DUBOV

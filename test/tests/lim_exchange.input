@@ -1,0 +1,16 @@
+012 Lim exchange test (Article 4.2)
+001    1      Test0001 Player0001               2350                             1.0    1     7 w 1
+001    2      Test0002 Player0002               2300                             1.0    2     8 w 1
+001    3      Test0003 Player0003               2250                             1.0    3     9 w 1
+001    4      Test0004 Player0004               2200                             1.0    4    10 b 1
+001    5      Test0005 Player0005               2150                             1.0    5    11 b 1
+001    6      Test0006 Player0006               2100                             1.0    6    12 b 1
+001    7      Test0007 Player0007               2050                             0.0    7     1 b 0
+001    8      Test0008 Player0008               2000                             0.0    8     2 b 0
+001    9      Test0009 Player0009               1950                             0.0    9     3 b 0
+001   10      Test0010 Player0010               1900                             0.0   10     4 w 0
+001   11      Test0011 Player0011               1850                             0.0   11     5 w 0
+001   12      Test0012 Player0012               1800                             0.0   12     6 w 0
+XXR 5
+XXC white1
+XXP 1 4

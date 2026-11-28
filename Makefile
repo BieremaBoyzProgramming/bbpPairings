@@ -7,6 +7,8 @@ OBJECTS = $(patsubst $(SRC)/%.cpp, $(OBJ)/%.o, $(SOURCES))
 
 # Flags specifying which Swiss systems to include.
 burstein = yes
+dubov = yes
+lim = yes
 dutch = yes
 
 # Flag indicating whether the tournament checker and random tournament generator
@@ -158,6 +160,12 @@ endif
 
 ifneq ($(burstein),yes)
 	optional_cxxflags += -DOMIT_BURSTEIN
+endif
+ifneq ($(dubov),yes)
+	optional_cxxflags += -DOMIT_DUBOV
+endif
+ifneq ($(lim),yes)
+	optional_cxxflags += -DOMIT_LIM
 endif
 ifneq ($(dutch),yes)
 	optional_cxxflags += -DOMIT_DUTCH

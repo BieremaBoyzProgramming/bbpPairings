@@ -42,6 +42,12 @@ namespace swisssystems
 #ifndef OMIT_BURSTEIN
     BURSTEIN,
 #endif
+#ifndef OMIT_DUBOV
+    DUBOV,
+#endif
+#ifndef OMIT_LIM
+    LIM,
+#endif
     NONE
   };
 }
